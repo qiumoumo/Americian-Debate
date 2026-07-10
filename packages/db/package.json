@@ -1,0 +1,23 @@
+{
+  "name": "@debate/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "node src/prisma-cli.mjs generate",
+    "prisma:push": "node src/prisma-cli.mjs db push --skip-generate",
+    "prisma:seed": "node src/seed.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "bcryptjs": "^3.0.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.1",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@debate/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./match-notes": "./src/match-notes.ts",
+    "./flow": "./src/flow.ts",
+    "./schemas": "./src/schemas.ts",
+    "./practice": "./src/practice.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types src/*.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "@debate/shared": "workspace:*",
+    "openai": "^4.80.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

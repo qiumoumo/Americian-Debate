@@ -1,0 +1,22 @@
+{
+  "name": "american-debate-suite",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "corepack pnpm --filter @debate/web dev",
+    "build": "corepack pnpm --filter @debate/web build",
+    "typecheck": "corepack pnpm -r typecheck",
+    "lint": "corepack pnpm --filter @debate/web lint",
+    "test": "corepack pnpm --filter @debate/ai test"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "prisma": "^6.2.1",
+    "typescript": "^5.7.3"
+  }
+}

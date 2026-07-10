@@ -1,0 +1,514 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  COACH
+  DEBATER
+  VIEWER
+}
+
+enum Side {
+  AFF
+  NEG
+  PRO
+  CON
+  GENERIC
+}
+
+enum DebateFormat {
+  PF
+  LD
+  POLICY
+  BP
+  CUSTOM
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  PENDING
+}
+
+enum ArgumentOutcomeStatus {
+  WON
+  LOST
+  DROPPED
+  TURNED
+  CONCEDED
+}
+
+enum FlowCellStatus {
+  OPEN
+  EXTENDED
+  ANSWERED
+  DROPPED
+  TURNED
+  CONCEDED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String?
+  disabledAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  documents    Document[]   @relation("DocumentOwner")
+  matches      Match[]
+  sessions     Session[]
+  aiConfig     UserAIConfig?
+  practiceSessions PracticeSession[]
+  libraryRounds    LibraryRound[]    @relation("LibraryRoundCreator")
+  roundVideoNotes  RoundVideoNote[]
+}
+
+model Workspace {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  memberships Membership[]
+  documents   Document[]
+  matches     Match[]
+  sessions    Session[]
+  invitations Invitation[]
+  aiConfig    WorkspaceAIConfig?
+  announcements Announcement[]
+  systemSettings SystemSetting[]
+  auditLogs   AuditLog[]
+  practiceSessions PracticeSession[]
+  libraryRounds LibraryRound[]
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  userId      String
+  workspaceId String
+  kind        String    @default("user")
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(DEBATER)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId, role])
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  email       String
+  workspaceId String
+  role        Role      @default(DEBATER)
+  token       String    @unique
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+// Workspace-wide AI deployed by an admin. Available to every member as the
+// default provider (unless the member sets their own personal config).
+model WorkspaceAIConfig {
+  id              String    @id @default(cuid())
+  workspaceId     String    @unique
+  providerId      String    @default("mock")
+  model           String    @default("")
+  baseUrl         String?
+  apiKeyEnc       String?
+  enabled         Boolean   @default(false)
+  updatedByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// Per-user private AI. Only the owning user can read or edit it; it is never
+// exposed to admins or other members. Takes precedence over the workspace config.
+model UserAIConfig {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  providerId String   @default("mock")
+  model      String   @default("")
+  baseUrl    String?
+  apiKeyEnc  String?
+  enabled    Boolean  @default(false)
+  // 用户显式选择使用哪一套已配置的 AI：auto（按优先级）| personal | workspace | env。
+  preferredSource String @default("auto")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  title           String
+  body            String    @default("")
+  published       Boolean   @default(false)
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, published])
+}
+
+model SystemSetting {
+  id          String    @id @default(cuid())
+  workspaceId String
+  key         String
+  valueJson   Json
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  actorUserId String?
+  actorName   String?
+  action      String
+  targetType  String?
+  targetId    String?
+  metaJson    Json?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model Document {
+  id          String               @id @default(cuid())
+  workspaceId String
+  ownerId     String
+  title       String
+  description String               @default("")
+  contentJson Json
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  deletedAt   DateTime?
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner       User                 @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  evidence    Evidence[]
+  permissions DocumentPermission[]
+  matchLinks  MatchDocument[]
+
+  @@index([workspaceId, deletedAt])
+  @@index([ownerId])
+}
+
+model DocumentPermission {
+  id          String   @id @default(cuid())
+  documentId  String
+  subjectType String
+  subjectId   String
+  permission  String
+  createdAt   DateTime @default(now())
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model Evidence {
+  id            String          @id @default(cuid())
+  documentId    String
+  title         String
+  claim         String
+  quote         String
+  sourceUrl     String
+  author        String?
+  publication   String?
+  publishedDate String?
+  side          Side            @default(GENERIC)
+  tagsJson      Json
+  contentRange  Json
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  document      Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  matchEvidence MatchEvidence[]
+
+  @@index([documentId])
+  @@index([side])
+}
+
+model Match {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  userId           String
+  tournament       String
+  roundNumber      String?
+  opponent         String
+  topic            String
+  format           DebateFormat      @default(PF)
+  side             Side              @default(GENERIC)
+  result           MatchResult       @default(PENDING)
+  judge            String?
+  date             DateTime          @default(now())
+  tagsJson         Json
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes            MatchNote[]
+  speechNotes      SpeechNote[]
+  evidence         MatchEvidence[]
+  documents        MatchDocument[]
+  argumentOutcomes ArgumentOutcome[]
+  reflection       Reflection?
+  flowRows         FlowRow[]
+
+  @@index([workspaceId, deletedAt])
+  @@index([userId])
+}
+
+model MatchDocument {
+  id         String   @id @default(cuid())
+  matchId    String
+  documentId String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, documentId])
+  @@index([documentId])
+}
+
+model MatchNote {
+  id           String   @id @default(cuid())
+  matchId      String
+  templateType String
+  contentJson  Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+}
+
+model SpeechNote {
+  id             String   @id @default(cuid())
+  matchId         String
+  speakerSide     Side
+  speechType      String
+  speechOrder     Int
+  kind            String   @default("speech")
+  flowable        Boolean  @default(true)
+  notes           String   @default("")
+  timerDurationMs Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  match           Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+}
+
+model MatchEvidence {
+  id                  String   @id @default(cuid())
+  matchId              String
+  evidenceId           String
+  speechType           String?
+  effectivenessRating  Int?
+  notes                String   @default("")
+  createdAt            DateTime @default(now())
+  match                Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  evidence             Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, evidenceId])
+  @@index([evidenceId])
+}
+
+model ArgumentOutcome {
+  id         String                @id @default(cuid())
+  matchId    String
+  argument   String
+  side       Side
+  category   String                @default("general")
+  outcome    ArgumentOutcomeStatus
+  confidence Int                   @default(3)
+  notes      String                @default("")
+  createdAt  DateTime              @default(now())
+  match      Match                 @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+}
+
+model Reflection {
+  id            String   @id @default(cuid())
+  matchId        String   @unique
+  whatWorked     String   @default("")
+  whatFailed     String   @default("")
+  judgeFeedback  String   @default("")
+  nextSteps      String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  match          Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model FlowRow {
+  id               String     @id @default(cuid())
+  matchId          String
+  side             Side       @default(GENERIC)
+  title            String     @default("")
+  category         String     @default("general")
+  order            Int        @default(0)
+  // Weighing layer：per-argument 的 impact 四要素比较（magnitude/probability/timeframe/scope）。
+  weighMagnitude   String     @default("")
+  weighProbability String     @default("")
+  weighTimeframe   String     @default("")
+  weighScope       String     @default("")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  match            Match      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  cells            FlowCell[]
+
+  @@index([matchId])
+}
+
+model FlowCell {
+  id              String         @id @default(cuid())
+  flowRowId       String
+  speechType      String
+  speechOrder     Int            @default(0)
+  content         String         @default("")
+  evidenceIdsJson Json           @default("[]")
+  status          FlowCellStatus @default(OPEN)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  flowRow         FlowRow        @relation(fields: [flowRowId], references: [id], onDelete: Cascade)
+  responses       FlowResponse[]
+
+  @@unique([flowRowId, speechOrder])
+  @@index([flowRowId])
+}
+
+// Line-by-line 链：一个 cell 下的离散 response 序列，每条独立 kind/status/evidence，
+// 用于训练 drops、extensions 与逐条 clash。
+model FlowResponse {
+  id              String         @id @default(cuid())
+  flowCellId      String
+  order           Int            @default(0)
+  side            Side           @default(GENERIC)
+  kind            String         @default("response") // response | answer | turn | weigh | collapse
+  content         String         @default("")
+  evidenceIdsJson Json           @default("[]")
+  status          FlowCellStatus @default(OPEN)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  flowCell        FlowCell       @relation(fields: [flowCellId], references: [id], onDelete: Cascade)
+
+  @@index([flowCellId])
+}
+
+model PracticeSession {
+  id             String   @id @default(cuid())
+  userId         String
+  workspaceId    String       @default("workspace-praiseforchaos")
+  topic          String
+  format         DebateFormat @default(PF)
+  side           Side         @default(GENERIC)
+  mode           String       @default("text-spar")
+  persona        String       @default("technical-opponent")
+  aiProvider     String
+  rubricJson     Json         @default("[]")
+  transcriptJson Json
+  scoreJson      Json
+  summaryJson    Json?
+  drillsJson     Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+}
+
+model AIRequestLog {
+  id                  String   @id @default(cuid())
+  userId              String?
+  provider            String
+  model               String
+  taskType            String
+  source              String?  @default("env")
+  inputTokenEstimate  Int      @default(0)
+  outputTokenEstimate Int      @default(0)
+  costEstimateCents   Int      @default(0)
+  requestStatus       String   @default("success")
+  errorCode           String?
+  createdAt           DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([provider, model])
+}
+
+// 工作区共享的「优秀比赛录像」素材库（外部策展，独立于用户自己的 Match）。
+model LibraryRound {
+  id              String           @id @default(cuid())
+  workspaceId     String
+  createdByUserId String?
+  title           String
+  description     String           @default("")
+  videoUrl        String
+  topic           String           @default("")
+  format          DebateFormat     @default(PF)
+  teams           String           @default("") // e.g. "Harvard AB vs Stanford CD"
+  year            String           @default("") // 外部年份，字符串（同 Evidence.publishedDate 风格）
+  tournament      String           @default("")
+  tagsJson        Json
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // 共享策展 round 必须在创建者离开后存活，故 SetNull（不同于 user-owned 的 Match）。
+  createdBy       User?            @relation("LibraryRoundCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notes           RoundVideoNote[]
+
+  @@index([workspaceId, deletedAt])
+}
+
+// round 上的 per-user private 轻量 timestamped 笔记。
+// 不加 @@unique([roundId, userId])：一个用户可对同一 round 加多条笔记，per-user 仅靠查询过滤。
+model RoundVideoNote {
+  id               String       @id @default(cuid())
+  roundId          String
+  userId           String
+  timestampSeconds Int? // 可选时间戳（秒）；null = 无时间戳
+  body             String       @default("")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  round            LibraryRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roundId, userId])
+}

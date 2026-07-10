@@ -1,0 +1,26 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Local secrets and machine-specific config
+.env*
+!.env.example
+api.txt
+.claude/*.local.json
+desktop.ini
+*.jar
+
+# Logs and generated artifacts
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Local SQLite databases may contain user emails, password hashes, sessions, and tokens.
+prisma/*.db
+prisma/*.db-journal
+prisma/*.sqlite
+prisma/*.sqlite-journal
