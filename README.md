@@ -24,6 +24,35 @@ provider is configured.
 
 ## Quick Start
 
+Use Node.js 22 LTS for the smoothest local setup. From a fresh clone or a
+downloaded ZIP, first make sure you are in the folder that contains
+`package.json`, `pnpm-workspace.yaml`, `apps/`, `packages/`, and `prisma/`.
+
+Create local environment settings:
+
+```powershell
+copy .env.example .env.local
+```
+
+For a local mock-AI setup, `.env.local` should contain at least:
+
+```env
+AI_PROVIDER=mock
+DATABASE_URL=file:./dev-mvp.db
+SESSION_SECRET=change-this-local-secret
+```
+
+Optional seed account overrides can also be set in `.env.local`:
+
+```env
+SEED_ADMIN_EMAIL=admin@debate.local
+SEED_ADMIN_NAME=Admin
+SEED_ADMIN_PASSWORD=debate-admin-2026
+```
+
+Install dependencies, generate Prisma Client, sync the SQLite schema, seed
+sample data, and start the web app:
+
 ```bash
 corepack pnpm install
 corepack pnpm --filter @debate/db prisma:generate
@@ -33,6 +62,10 @@ corepack pnpm dev
 ```
 
 Open `http://localhost:3000`. The dev server binds to `0.0.0.0:3000`, so devices on the same LAN can use `http://<your-ip>:3000` if the firewall allows Node.js.
+
+If you downloaded a ZIP from GitHub, Windows may create an extra wrapper folder.
+Run the commands from the inner project folder. If `pnpm` prints
+`No package.json found`, you are one directory too high.
 
 ## Local Login
 
@@ -114,6 +147,19 @@ corepack pnpm --filter @debate/db prisma:push
 - `.env.local`, `api.txt`, SQLite dev DBs, `.next`, `node_modules`, and `*.tsbuildinfo` are ignored by `.gitignore`.
 - AI routes require login and filter data by workspace.
 - Copy-prompt mode avoids provider cost, but users still decide what text they paste into external tools.
+
+## Troubleshooting
+
+- `No package.json found`: change into the actual project root, the directory
+  that contains `package.json` and `pnpm-workspace.yaml`.
+- `The table main.Session does not exist`: run
+  `corepack pnpm --filter @debate/db prisma:push` with the same
+  `DATABASE_URL` used by the web app, then run `prisma:seed`.
+- Prisma engine download failures usually mean the connection to
+  `binaries.prisma.sh` or `registry.npmjs.org` was interrupted. Retry after
+  switching networks or enabling your normal development proxy.
+- If Node.js 24 produces Prisma or Next.js runtime issues, switch to Node.js 22
+  LTS and rerun `corepack pnpm install`.
 
 ## License
 
