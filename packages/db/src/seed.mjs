@@ -7,9 +7,10 @@ loadLocalEnv();
 const prisma = new PrismaClient();
 
 // 开发用管理员账号（生产环境请通过 /register 自助注册或改用真实凭据）
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL;
-const ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Owner";
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? (IS_PRODUCTION ? "" : "admin@debate.local");
+const ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Admin";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? (IS_PRODUCTION ? "" : "debate-admin-2026");
 const WORKSPACE_NAME = "Debate Workspace";
 
 const sideMap = {
@@ -189,7 +190,7 @@ const libraryRounds = [
 
 async function main() {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    throw new Error("Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in .env.local before running the seed script.");
+    throw new Error("Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD before running the seed script in production.");
   }
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 

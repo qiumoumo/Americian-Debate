@@ -36,7 +36,13 @@ Open `http://localhost:3000`. The dev server binds to `0.0.0.0:3000`, so devices
 
 ## Local Login
 
-Seed can create a local development owner account. Put the credentials in `.env.local` before running `prisma:seed`:
+Seed creates a local development owner account by default:
+
+- Email: `admin@debate.local`
+- Password: `debate-admin-2026`
+- Role: `OWNER`
+
+You can override the seed account by putting these values in `.env.local` before running `prisma:seed`:
 
 ```env
 SEED_ADMIN_EMAIL=owner@example.local
@@ -44,7 +50,7 @@ SEED_ADMIN_NAME=Owner
 SEED_ADMIN_PASSWORD=replace-with-a-local-password
 ```
 
-The seeded account gets the `OWNER` role. Do not commit `.env.local` or real account details.
+Do not use the default password for any public or production deployment.
 
 ## AI Configuration
 
