@@ -8,9 +8,13 @@ const prisma = new PrismaClient();
 
 // 开发用管理员账号（生产环境请通过 /register 自助注册或改用真实凭据）
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? (IS_PRODUCTION ? "" : "admin@debate.local");
-const ADMIN_NAME = process.env.SEED_ADMIN_NAME ?? "Admin";
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? (IS_PRODUCTION ? "" : "debate-admin-2026");
+const envOrDefault = (value, fallback) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+};
+const ADMIN_EMAIL = envOrDefault(process.env.SEED_ADMIN_EMAIL, IS_PRODUCTION ? "" : "admin@debate.local");
+const ADMIN_NAME = envOrDefault(process.env.SEED_ADMIN_NAME, "Admin");
+const ADMIN_PASSWORD = envOrDefault(process.env.SEED_ADMIN_PASSWORD, IS_PRODUCTION ? "" : "debate-admin-2026");
 const WORKSPACE_NAME = "Debate Workspace";
 
 const sideMap = {
