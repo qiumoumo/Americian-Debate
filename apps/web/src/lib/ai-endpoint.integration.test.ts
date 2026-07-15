@@ -64,7 +64,12 @@ before(async () => {
       return;
     }
     if (request.url === "/v1/chat/completions" || request.url === "/chat-only/v1/chat/completions") {
-      const payload = JSON.parse(body) as { model?: string };
+      const payload = JSON.parse(body) as { model?: string; max_tokens?: number };
+      if (payload.max_tokens !== undefined) {
+        response.writeHead(502, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: { message: "Upstream request failed" } }));
+        return;
+      }
       if (payload.model !== "model-alpha") {
         response.writeHead(404, { "content-type": "application/json" });
         response.end(JSON.stringify({ error: { message: "model not found" } }));
@@ -149,7 +154,7 @@ describe("AI endpoint inspection", () => {
     assert.equal(requests.at(-1)?.method, "POST");
     assert.equal(requests.at(-1)?.url, "/v1/chat/completions");
     assert.equal(JSON.parse(requests.at(-1)?.body ?? "{}").model, "model-alpha");
-    assert.equal(JSON.parse(requests.at(-1)?.body ?? "{}").max_tokens, 8);
+    assert.equal(JSON.parse(requests.at(-1)?.body ?? "{}").max_tokens, undefined);
   });
 
   it("connects when chat works even if the provider has no model-list endpoint", async () => {

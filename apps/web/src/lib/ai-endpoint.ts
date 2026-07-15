@@ -381,7 +381,7 @@ export async function testAIEndpointConnection(input: AIEndpointInput, options: 
       });
       await provider.chat({
         messages: [{ role: "user", content: "Reply with OK." }],
-        maxOutputTokens: 8,
+        maxOutputTokens: input.providerId === "anthropic" ? 8 : undefined,
         timeoutMs
       });
       const latencyMs = Math.max(0, Math.round(performance.now() - startedAt));
