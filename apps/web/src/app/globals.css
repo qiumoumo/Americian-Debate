@@ -2279,11 +2279,33 @@ a.timeline-item:hover {
 .temporary-password code { font-size: 1rem; font-weight: 800; }
 .danger-zone { margin-top: 16px; padding: 12px; border: 1px solid #e4a4a0; border-radius: 6px; background: #fff7f6; }
 
+/* Saved AI configuration libraries */
+.ai-config-list, .ai-public-config-list { display: grid; gap: 10px; }
+.ai-config-row { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.ai-config-row > summary { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 15px 16px; cursor: pointer; list-style-position: inside; }
+.ai-config-summary-main { display: inline-grid; gap: 3px; min-width: 0; }
+.ai-config-summary-main small, .ai-public-config-row small { color: var(--muted); overflow-wrap: anywhere; }
+.ai-config-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .32fr); gap: 20px; padding: 18px 16px; border-top: 1px solid var(--line); }
+.ai-config-commands { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.inline-action-form { display: grid; gap: 7px; }
+.ai-public-config-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.ai-public-config-row:last-child { border-bottom: 0; }
+.ai-public-config-row > div { display: grid; gap: 3px; min-width: 0; }
+.form-error { color: #a12a20; font-size: .8rem; font-weight: 700; }
+.form-success { color: #18764a; font-size: .8rem; font-weight: 700; }
+.field input[aria-invalid="true"] { border-color: #c84b40; }
+.button:disabled { cursor: wait; opacity: .62; }
+.compact-table .table-row { min-height: 48px; }
+.ai-selection-form { align-content: start; }
+
 @media (max-width: 720px) {
   .room-meta-row { grid-template-columns: 1fr; }
   .room-invite-stack { top: 10px; right: 10px; width: calc(100vw - 20px); }
   .account-filter, .account-detail-grid { grid-template-columns: 1fr; }
   .account-summary { align-items: flex-start; flex-direction: column; }
+  .ai-config-row > summary { align-items: flex-start; flex-direction: column; }
+  .ai-config-editor { grid-template-columns: 1fr; }
+  .ai-config-row .actions { gap: 6px; }
 }
 
 @media (max-width: 720px) {

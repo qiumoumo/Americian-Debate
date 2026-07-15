@@ -66,6 +66,17 @@ enum RoomInvitationStatus {
   CANCELLED
 }
 
+enum AIConfigScope {
+  GLOBAL
+  PERSONAL
+}
+
+enum AISelectionMode {
+  AUTO
+  CONFIG
+  ENV
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -81,6 +92,9 @@ model User {
   matches      Match[]
   sessions     Session[]
   aiConfig     UserAIConfig?
+  aiConfigs    AIConfig[]       @relation("AIConfigOwner")
+  updatedAIConfigs AIConfig[]   @relation("AIConfigUpdater")
+  aiSelection  UserAISelection?
   practiceSessions PracticeSession[]
   libraryRounds    LibraryRound[]    @relation("LibraryRoundCreator")
   roundVideoNotes  RoundVideoNote[]
@@ -187,6 +201,43 @@ model UserAIConfig {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Host-wide and private saved AI configurations. The legacy workspace/user
+// tables above remain available for an idempotent upgrade backfill.
+model AIConfig {
+  id              String        @id @default(cuid())
+  name            String
+  scope           AIConfigScope
+  ownerUserId     String?
+  providerId      String        @default("mock")
+  model           String        @default("")
+  baseUrl         String?
+  apiKeyEnc       String?
+  enabled         Boolean       @default(false)
+  isDefault       Boolean       @default(false)
+  updatedByUserId String?
+  legacyRef       String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  owner           User?         @relation("AIConfigOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  updatedBy       User?         @relation("AIConfigUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  selections      UserAISelection[]
+
+  @@index([scope, enabled, isDefault])
+  @@index([ownerUserId, updatedAt])
+}
+
+model UserAISelection {
+  userId    String          @id
+  mode      AISelectionMode @default(AUTO)
+  configId  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config    AIConfig?       @relation(fields: [configId], references: [id], onDelete: SetNull)
+
+  @@index([configId])
 }
 
 model Announcement {

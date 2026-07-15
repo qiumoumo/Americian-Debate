@@ -58,6 +58,7 @@ corepack pnpm install
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
 corepack pnpm --filter @debate/db prisma:seed
+corepack pnpm --filter @debate/db ai:backfill
 corepack pnpm --filter @debate/db rooms:backfill
 corepack pnpm dev
 ```
@@ -93,7 +94,12 @@ AI keys are server-only. Copy `.env.example` to `.env.local` and never create `N
 ```env
 AI_PROVIDER=mock
 DATABASE_URL=file:./dev-mvp.db
+APP_ENCRYPTION_KEY=replace-with-a-long-random-secret
 ```
+
+Saved AI keys use `APP_ENCRYPTION_KEY` when it is at least 16 characters long. If it is omitted, the server derives the encryption key from a sufficiently long `SESSION_SECRET`; a dedicated key is recommended for production. Keep the selected secret stable or previously saved API keys cannot be decrypted.
+
+System administrators can save multiple host-wide AI configurations from `/admin/ai`. Users can select any enabled global configuration or manage multiple private configurations from `/app/settings`; private keys and endpoints are never exposed to administrators or other users.
 
 Supported providers:
 
@@ -141,6 +147,7 @@ When changing Prisma models, run:
 ```bash
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
+corepack pnpm --filter @debate/db ai:backfill
 corepack pnpm --filter @debate/db rooms:backfill
 ```
 

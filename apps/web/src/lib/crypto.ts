@@ -11,14 +11,20 @@ let cachedKey: Buffer | null = null;
 function getKey(): Buffer {
   if (cachedKey) return cachedKey;
 
-  const secret = process.env.APP_ENCRYPTION_KEY;
-  if (secret && secret.length >= 16) {
+  const dedicatedSecret = process.env.APP_ENCRYPTION_KEY;
+  const sessionSecret = process.env.SESSION_SECRET;
+  const secret = dedicatedSecret && dedicatedSecret.length >= 16
+    ? dedicatedSecret
+    : sessionSecret && sessionSecret.length >= 16
+      ? sessionSecret
+      : undefined;
+  if (secret) {
     cachedKey = scryptSync(secret, KEY_SALT, 32);
     return cachedKey;
   }
 
   if (process.env.NODE_ENV === "production") {
-    throw new Error("APP_ENCRYPTION_KEY must be set (>=16 chars) in production to encrypt AI keys.");
+    throw new Error("APP_ENCRYPTION_KEY or SESSION_SECRET must be set (>=16 chars) in production to encrypt AI keys.");
   }
 
   // Local-dev fallback so the feature works without extra setup.

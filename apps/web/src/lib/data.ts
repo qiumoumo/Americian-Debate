@@ -292,6 +292,14 @@ export async function getAdminDashboard(workspaceId: string) {
   };
 }
 
+export async function getGlobalAIUsageLogs(take = 20) {
+  return db.aIRequestLog.findMany({
+    where: { OR: [{ source: null }, { source: { not: "personal" } }] },
+    orderBy: { createdAt: "desc" },
+    take
+  });
+}
+
 export async function getAdminWorkspaces(userId: string) {
   const memberships = await db.membership.findMany({
     where: { userId, role: { in: ["OWNER", "COACH"] }, workspace: { deletedAt: null } },

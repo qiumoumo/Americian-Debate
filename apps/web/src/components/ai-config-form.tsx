@@ -1,32 +1,29 @@
+"use client";
+
+import { useActionState } from "react";
 import { AI_PROVIDER_CHOICES } from "@debate/ai";
-import type { AIConfigView } from "@/lib/ai-config";
+import type { AIConfigActionState, AIConfigView } from "@/lib/ai-config";
+
+const initialState: AIConfigActionState = { ok: false, message: "" };
 
 interface AIConfigFormProps {
-  action: (formData: FormData) => void | Promise<void>;
-  view: AIConfigView | null;
-  /** When false the form renders read-only (no edit permission). */
-  canEdit?: boolean;
+  action: (state: AIConfigActionState, formData: FormData) => Promise<AIConfigActionState>;
+  view?: AIConfigView | null;
   submitLabel?: string;
 }
 
-/**
- * Shared editor for an AI provider config. Used by the admin (workspace config)
- * and the user settings (personal config). The API key is write-only: it is
- * never sent back to the browser, only a "已配置" hint is shown.
- */
-export function AIConfigForm({ action, view, canEdit = true, submitLabel = "保存配置" }: AIConfigFormProps) {
-  if (!canEdit) {
-    return (
-      <div className="table-like">
-        <div className="table-row"><div><strong>Provider</strong></div><div><span className="pill">{view?.providerId ?? "—"}</span></div><div>{view?.enabled ? "✅ 已启用" : "未启用"}</div></div>
-        <div className="table-row"><div><strong>Model</strong></div><div>{view?.model || "—"}</div><div /></div>
-        <div className="table-row"><div><strong>API Key</strong></div><div>{view?.hasKey ? "已配置" : "未配置"}</div><div /></div>
-      </div>
-    );
-  }
+export function AIConfigForm({ action, view, submitLabel = "保存配置" }: AIConfigFormProps) {
+  const [state, formAction, pending] = useActionState(action, initialState);
+  const error = (field: string) => state.fieldErrors?.[field];
 
   return (
-    <form action={action} className="stack">
+    <form action={formAction} className="stack">
+      {view ? <input type="hidden" name="id" value={view.id} /> : null}
+      <label className="field">
+        <span>配置名称</span>
+        <input name="name" type="text" defaultValue={view?.name ?? ""} placeholder="例如：团队 DeepSeek" aria-invalid={Boolean(error("name"))} />
+        {error("name") ? <small className="form-error">{error("name")}</small> : null}
+      </label>
       <label className="field">
         <span>Provider</span>
         <select name="providerId" defaultValue={view?.providerId ?? "mock"}>
@@ -37,25 +34,31 @@ export function AIConfigForm({ action, view, canEdit = true, submitLabel = "保�
       </label>
       <label className="field">
         <span>Model</span>
-        <input name="model" type="text" defaultValue={view?.model ?? ""} placeholder="留空则用该 provider 的默认模型" />
+        <input name="model" type="text" defaultValue={view?.model ?? ""} placeholder="预设 provider 可留空" aria-invalid={Boolean(error("model"))} />
+        {error("model") ? <small className="form-error">{error("model")}</small> : null}
       </label>
       <label className="field">
-        <span>Base URL（仅自定义端点需要；已知第三方会自动填入）</span>
-        <input name="baseUrl" type="text" defaultValue={view?.baseUrl ?? ""} placeholder="https://api.deepseek.com/v1" />
+        <span>Base URL</span>
+        <input name="baseUrl" type="url" defaultValue={view?.baseUrl ?? ""} placeholder="https://api.example.com/v1" aria-invalid={Boolean(error("baseUrl"))} />
+        {error("baseUrl") ? <small className="form-error">{error("baseUrl")}</small> : null}
       </label>
       <label className="field">
         <span>API Key</span>
-        <input name="apiKey" type="password" autoComplete="off" placeholder={view?.hasKey ? "已配置（留空则保持不变）" : "sk-..."} />
+        <input name="apiKey" type="password" autoComplete="off" placeholder={view?.hasKey ? "已配置（留空保持不变）" : "sk-..."} aria-invalid={Boolean(error("apiKey"))} />
+        {error("apiKey") ? <small className="form-error">{error("apiKey")}</small> : null}
       </label>
+      {view?.hasKey ? (
+        <label className="check-field">
+          <input name="clearKey" type="checkbox" value="true" />
+          <span>清除已保存的密钥</span>
+        </label>
+      ) : null}
       <label className="check-field">
-        <input name="clearKey" type="checkbox" value="true" />
-        <span>清除已保存的密钥</span>
-      </label>
-      <label className="check-field">
-        <input name="enabled" type="checkbox" value="true" defaultChecked={view?.enabled ?? false} />
+        <input name="enabled" type="checkbox" value="true" defaultChecked={view?.enabled ?? true} />
         <span>启用此配置</span>
       </label>
-      <button className="button primary" type="submit">{submitLabel}</button>
+      {state.message ? <p className={state.ok ? "form-success" : "form-error"} role="status">{state.message}</p> : null}
+      <button className="button primary" type="submit" disabled={pending}>{pending ? "保存中…" : submitLabel}</button>
     </form>
   );
 }
