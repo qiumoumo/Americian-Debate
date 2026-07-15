@@ -21,12 +21,18 @@ const { db } = await import("@debate/db");
 const rooms = await import("./rooms.ts");
 const data = await import("./data.ts");
 const { hasSystemAdminAccess } = await import("./admin-policy.ts");
+const accounts = await import("./accounts.ts");
+const { normalizeLegacySessionTimestamps } = await import("@debate/db/presence");
 
 async function createUserFixture(label: string) {
   const user = await db.user.create({ data: { email: `${label}@test.local`, name: label } });
   const workspace = await db.workspace.create({ data: { name: `${label} workspace` } });
   await db.membership.create({ data: { userId: user.id, workspaceId: workspace.id, role: "OWNER" } });
   return { user, workspace };
+}
+
+async function authorizeSystemAdmin(userId: string) {
+  await db.user.update({ where: { id: userId }, data: { isSystemAdmin: true, passwordHash: "test-password-hash" } });
 }
 
 async function createMatchFixture(owner: Awaited<ReturnType<typeof createUserFixture>>, suffix: string) {
@@ -73,7 +79,7 @@ describe("room membership interface", () => {
     const owner = await createUserFixture("owner-invite");
     const guest = await createUserFixture("guest-invite");
     const { match } = await createMatchFixture(owner, "invite");
-    await db.session.create({ data: { token: "guest-online-token", userId: guest.user.id, workspaceId: guest.workspace.id, kind: "user", expiresAt: new Date(Date.now() + 60_000) } });
+    await db.session.create({ data: { token: "guest-online-token", userId: guest.user.id, workspaceId: guest.workspace.id, kind: "user", expiresAt: new Date(Date.now() + 60_000), lastSeenAt: new Date() } });
     const invitation = await rooms.inviteUserToRoom(match.id, guest.user.id, owner.user.id);
     assert.equal(await rooms.respondToRoomInvitation(invitation.id, guest.user.id, true), match.id);
     await assert.rejects(rooms.respondToRoomInvitation(invitation.id, guest.user.id, false), /no longer available/);
@@ -133,5 +139,83 @@ describe("room membership interface", () => {
     const evidence = await data.getEvidenceForWorkspace(viewer.workspace.id, viewer.user.id);
     assert.equal(evidence[0]?.title, "Mine");
     assert.ok(evidence.some((card) => card.title === "Other newer" && card.uploaderName === other.user.name && !card.isMine));
+  });
+
+  it("normalizes legacy text session timestamps so stale accounts are offline", async () => {
+    const user = await createUserFixture("legacy-session");
+    await db.session.create({ data: { token: "legacy-text-session", userId: user.user.id, workspaceId: user.workspace.id, expiresAt: new Date(Date.now() + 60_000), lastSeenAt: new Date() } });
+    await db.$executeRawUnsafe(`UPDATE "Session" SET "lastSeenAt" = '2099-01-01 00:00:00' WHERE "token" = 'legacy-text-session'`);
+    assert.equal(await normalizeLegacySessionTimestamps(db), 1);
+    assert.ok(!(await rooms.listOnlineUsers()).some((account) => account.id === user.user.id));
+  });
+});
+
+describe("global account administration interface", () => {
+  it("allows only system administrators to list all registered accounts", async () => {
+    const administrator = await createUserFixture("accounts-admin");
+    const ordinaryOwner = await createUserFixture("accounts-owner");
+    await authorizeSystemAdmin(administrator.user.id);
+
+    const visible = await accounts.getGlobalAccounts(administrator.user.id, {});
+    assert.ok(visible.some((account) => account.id === ordinaryOwner.user.id));
+    await assert.rejects(accounts.getGlobalAccounts(ordinaryOwner.user.id, {}), /System administrator/);
+  });
+
+  it("resets a password once, expires sessions, and requires a password change", async () => {
+    const administrator = await createUserFixture("reset-admin");
+    const target = await createUserFixture("reset-target");
+    await authorizeSystemAdmin(administrator.user.id);
+    await db.session.create({ data: { token: "reset-target-session", userId: target.user.id, workspaceId: target.workspace.id, expiresAt: new Date(Date.now() + 60_000), lastSeenAt: new Date() } });
+
+    const result = await accounts.resetGlobalAccountPassword(administrator.user.id, target.user.id);
+    assert.equal(result.temporaryPassword.length >= 12, true);
+    const updated = await db.user.findUniqueOrThrow({ where: { id: target.user.id } });
+    assert.equal(updated.mustChangePassword, true);
+    assert.equal(await db.session.count({ where: { userId: target.user.id } }), 0);
+  });
+
+  it("rejects deleting the current administrator", async () => {
+    const administrator = await createUserFixture("delete-self-admin");
+    await authorizeSystemAdmin(administrator.user.id);
+    await assert.rejects(
+      accounts.deleteGlobalAccount(administrator.user.id, administrator.user.id, administrator.user.email),
+      /own account/
+    );
+  });
+
+  it("disables an account and expires its active sessions", async () => {
+    const administrator = await createUserFixture("disable-admin");
+    const target = await createUserFixture("disable-target");
+    await authorizeSystemAdmin(administrator.user.id);
+    await db.session.create({ data: { token: "disable-target-session", userId: target.user.id, workspaceId: target.workspace.id, expiresAt: new Date(Date.now() + 60_000), lastSeenAt: new Date() } });
+    await accounts.setGlobalAccountDisabled(administrator.user.id, target.user.id, true);
+    assert.ok((await db.user.findUniqueOrThrow({ where: { id: target.user.id } })).disabledAt);
+    assert.equal(await db.session.count({ where: { userId: target.user.id } }), 0);
+  });
+
+  it("permanently deletes owned data and empty workspaces but keeps shared workspaces", async () => {
+    const administrator = await createUserFixture("delete-admin");
+    const target = await createUserFixture("delete-target");
+    const colleague = await createUserFixture("delete-colleague");
+    await authorizeSystemAdmin(administrator.user.id);
+    const shared = await db.workspace.create({ data: { name: "Shared workspace" } });
+    await db.membership.createMany({ data: [
+      { userId: target.user.id, workspaceId: shared.id, role: "DEBATER" },
+      { userId: colleague.user.id, workspaceId: shared.id, role: "OWNER" }
+    ] });
+    const document = await db.document.create({ data: { workspaceId: target.workspace.id, ownerId: target.user.id, title: "Owned", contentJson: {} } });
+    const match = await db.match.create({ data: { workspaceId: target.workspace.id, userId: target.user.id, tournament: "Owned", opponent: "Opponent", topic: "Topic", tagsJson: [] } });
+    await rooms.createRoomForMatch(match.id, target.user.id, match.format);
+
+    await assert.rejects(
+      accounts.deleteGlobalAccount(administrator.user.id, target.user.id, "wrong@test.local"),
+      /does not match/
+    );
+    await accounts.deleteGlobalAccount(administrator.user.id, target.user.id, target.user.email);
+    assert.equal(await db.user.findUnique({ where: { id: target.user.id } }), null);
+    assert.equal(await db.document.findUnique({ where: { id: document.id } }), null);
+    assert.equal(await db.match.findUnique({ where: { id: match.id } }), null);
+    assert.equal(await db.workspace.findUnique({ where: { id: target.workspace.id } }), null);
+    assert.ok(await db.workspace.findUnique({ where: { id: shared.id } }));
   });
 });

@@ -70,7 +70,7 @@ function generateSessionToken() {
 export async function createSession(userId: string, workspaceId: string, kind: SessionKind = "user") {
   const token = generateSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_COOKIE_MAX_AGE_SECONDS * 1000);
-  await db.session.create({ data: { token, userId, workspaceId, kind, expiresAt } });
+  await db.session.create({ data: { token, userId, workspaceId, kind, expiresAt, lastSeenAt: new Date() } });
   return { token, expiresAt };
 }
 
@@ -111,6 +111,7 @@ export async function verifyCredentials(email: string, password: string) {
 export async function verifyAdminCredentials(email: string, password: string) {
   const result = await verifyCredentials(email, password);
   if (!result) return null;
+  if (result.user.mustChangePassword) return null;
   if (!hasSystemAdminAccess(result.user)) return null;
   return result;
 }
@@ -167,10 +168,13 @@ export async function getAdminSession() {
   return session;
 }
 
-export async function requireUser() {
+export async function requireUser(options: { allowPasswordChange?: boolean } = {}) {
   const session = await getSession();
   if (!session) {
     redirect("/login");
+  }
+  if (session.user.mustChangePassword && !options.allowPasswordChange) {
+    redirect("/app/change-password");
   }
   return session;
 }

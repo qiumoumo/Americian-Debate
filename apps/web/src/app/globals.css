@@ -2235,23 +2235,23 @@ a.timeline-item:hover {
 }
 
 /* LAN match rooms */
-.room-invite-overlay {
+.room-invite-stack {
   position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(15 23 42 / 58%);
+  top: 18px;
+  right: 18px;
+  z-index: 80;
+  width: min(420px, calc(100vw - 36px));
+  pointer-events: none;
 }
 
 .room-invite-dialog {
-  width: min(460px, 100%);
-  padding: 24px;
+  width: 100%;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 24px 80px rgb(15 23 42 / 28%);
+  pointer-events: auto;
 }
 
 .room-invite-dialog h2 { margin: 10px 0 6px; font-size: 1.25rem; }
@@ -2263,8 +2263,27 @@ a.timeline-item:hover {
 .library-uploader { margin: 5px 0 0; color: var(--accent-ink); font-size: .82rem; font-weight: 700; }
 .status-error { padding: 10px 12px; border-left: 3px solid #b42318; background: #fff1f0; color: #8f1d14; }
 
+/* Global account administration */
+.account-filter { display: grid; grid-template-columns: minmax(220px, 1fr) 190px auto; gap: 10px; align-items: end; }
+.account-list { display: grid; gap: 10px; }
+.account-row { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.account-summary { display: flex; justify-content: space-between; gap: 18px; padding: 16px; align-items: center; }
+.account-details { border-top: 1px solid var(--line); padding: 12px 16px 16px; }
+.account-details > summary, .danger-zone > summary { cursor: pointer; font-weight: 700; }
+.account-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.account-detail-grid > div { display: grid; gap: 3px; }
+.account-detail-grid span { color: var(--muted); font-size: .8rem; }
+.membership-list, .account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: flex-start; }
+.account-reset-control { display: grid; gap: 8px; }
+.temporary-password { display: grid; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #f4fff7; }
+.temporary-password code { font-size: 1rem; font-weight: 800; }
+.danger-zone { margin-top: 16px; padding: 12px; border: 1px solid #e4a4a0; border-radius: 6px; background: #fff7f6; }
+
 @media (max-width: 720px) {
   .room-meta-row { grid-template-columns: 1fr; }
+  .room-invite-stack { top: 10px; right: 10px; width: calc(100vw - 20px); }
+  .account-filter, .account-detail-grid { grid-template-columns: 1fr; }
+  .account-summary { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 720px) {

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { SectionCard } from "@/components/section-card";
 import { requireAdmin } from "@/lib/auth";
@@ -7,9 +8,7 @@ import { getPendingInvitations, getWorkspaceMembers } from "@/lib/data";
 import {
   inviteMember,
   removeMember,
-  resetMemberPassword,
   revokeInvitation,
-  setMemberDisabled,
   updateMemberRole
 } from "./actions";
 
@@ -27,8 +26,6 @@ export default async function AdminMembersPage({
   searchParams: Promise<{
     invited?: string;
     token?: string;
-    reset?: string;
-    temp?: string;
     error?: string;
   }>;
 }) {
@@ -50,8 +47,8 @@ export default async function AdminMembersPage({
     <AdminShell activeHref="/admin/members" user={sessionShellUser(session)}>
       <section className="hero">
         <div className="eyebrow">Members</div>
-        <h1>成员与账号管理</h1>
-        <p>邀请成员、调整角色、重置密码、禁用或移除账号。当前工作区：{session.workspace.name}。</p>
+        <h1>工作区成员管理</h1>
+        <p>邀请成员、调整角色或移出当前工作区成员。全局账号与密码管理请前往注册账号页面。</p>
       </section>
 
       {errorMessage ? <p className="empty-state">{errorMessage}</p> : null}
@@ -62,11 +59,9 @@ export default async function AdminMembersPage({
         </SectionCard>
       ) : null}
 
-      {params.reset && params.temp ? (
-        <SectionCard title="临时密码已生成" description={`已为 ${params.reset} 重置密码，请复制并转交给本人，登录后建议尽快自行修改。`}>
-          <pre className="mini-pre">{params.temp}</pre>
-        </SectionCard>
-      ) : null}
+      <div style={{ height: 18 }} />
+
+      <div className="actions"><Link className="button" href="/admin/accounts">前往全局注册账号管理</Link></div>
 
       <div style={{ height: 18 }} />
 
@@ -93,7 +88,7 @@ export default async function AdminMembersPage({
 
       <div style={{ height: 18 }} />
 
-      <SectionCard title="成员列表" description={isOwner ? "OWNER 可改角色、重置密码、禁用与移除。" : "COACH 可重置非 OWNER 成员的密码；角色与禁用仅 OWNER 可用。"}>
+      <SectionCard title="成员列表" description={isOwner ? "OWNER 可调整角色或将成员移出当前 workspace。" : "COACH 可查看当前 workspace 成员。"}>
         <div className="table-like admin-table members-table">
           <div className="table-row header">
             <div>成员</div>
@@ -102,9 +97,7 @@ export default async function AdminMembersPage({
             <div>操作</div>
           </div>
           {members.map((membership) => {
-            const disabled = Boolean(membership.user.disabledAt);
             const isSelf = membership.userId === session.user.id;
-            const canReset = isOwner || membership.role !== "OWNER";
             return (
               <div className="table-row" key={membership.id}>
                 <div>
@@ -129,22 +122,9 @@ export default async function AdminMembersPage({
                   )}
                 </div>
                 <div>
-                  <span className="pill">{disabled ? "已禁用" : "正常"}</span>
+                  <span className="pill">{membership.user.disabledAt ? "账号已禁用" : "正常"}</span>
                 </div>
                 <div className="action-cell">
-                  {canReset ? (
-                    <form action={resetMemberPassword} className="inline-form">
-                      <input type="hidden" name="membershipId" value={membership.id} />
-                      <button className="button" type="submit">重置密码</button>
-                    </form>
-                  ) : null}
-                  {isOwner && !isSelf ? (
-                    <form action={setMemberDisabled} className="inline-form">
-                      <input type="hidden" name="membershipId" value={membership.id} />
-                      <input type="hidden" name="disabled" value={disabled ? "false" : "true"} />
-                      <button className="button" type="submit">{disabled ? "启用" : "禁用"}</button>
-                    </form>
-                  ) : null}
                   {isOwner && !isSelf ? (
                     <form action={removeMember} className="inline-form">
                       <input type="hidden" name="membershipId" value={membership.id} />

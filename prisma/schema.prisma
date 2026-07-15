@@ -71,6 +71,7 @@ model User {
   email        String       @unique
   name         String
   passwordHash String?
+  mustChangePassword Boolean @default(false)
   disabledAt   DateTime?
   isSystemAdmin Boolean      @default(false)
   createdAt    DateTime     @default(now())

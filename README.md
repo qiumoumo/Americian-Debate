@@ -145,6 +145,7 @@ corepack pnpm --filter @debate/db rooms:backfill
 ```
 
 LAN HTTP is the default. Set `COOKIE_SECURE=true` only when the host is served through HTTPS.
+The room backfill also normalizes legacy session heartbeat timestamps; users become online again after their next app heartbeat.
 
 ## Safety Notes
 

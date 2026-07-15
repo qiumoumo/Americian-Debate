@@ -10,7 +10,8 @@ export const userNavigation = [
 export const adminNavigation = [
   { href: "/admin", label: "概览", badge: "Home" },
   { href: "/admin/rooms", label: "比赛房间", badge: "Live" },
-  { href: "/admin/members", label: "成员", badge: "Team" },
+  { href: "/admin/accounts", label: "注册账号", badge: "Users" },
+  { href: "/admin/members", label: "工作区成员", badge: "Team" },
   { href: "/admin/analytics", label: "数据分析", badge: "Stats" },
   { href: "/admin/ai", label: "AI 配置", badge: "AI" },
   { href: "/admin/workspaces", label: "工作区", badge: "WS" },

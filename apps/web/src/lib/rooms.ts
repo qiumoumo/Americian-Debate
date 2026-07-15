@@ -12,6 +12,15 @@ import { mapPrismaFormat } from "./mappers.ts";
 export const ONLINE_WINDOW_MS = 30_000;
 export const ROOM_INVITATION_TTL_MS = 10 * 60_000;
 
+export function activeUserSessionWhere(now = new Date()) {
+  return {
+    kind: "user" as const,
+    expiresAt: { gt: now },
+    lastSeenAt: { gte: new Date(now.getTime() - ONLINE_WINDOW_MS) },
+    user: { disabledAt: null }
+  };
+}
+
 function asTimer(value: Prisma.JsonValue): SharedTimerState {
   return value as unknown as SharedTimerState;
 }
@@ -197,9 +206,8 @@ export async function transferRoomOwnership(matchId: string, targetUserId: strin
 }
 
 export async function listOnlineUsers() {
-  const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
   const sessions = await db.session.findMany({
-    where: { kind: "user", expiresAt: { gt: new Date() }, lastSeenAt: { gte: cutoff }, user: { disabledAt: null } },
+    where: activeUserSessionWhere(),
     include: { user: { select: { id: true, name: true, email: true } } },
     orderBy: { lastSeenAt: "desc" }
   });
@@ -223,9 +231,8 @@ export async function listActiveRooms() {
 export async function inviteUserToRoom(matchId: string, recipientId: string, invitedById: string) {
   const room = await db.matchRoom.findUnique({ where: { matchId } });
   if (!room) throw new Error("Room not found");
-  const onlineCutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
   const online = await db.session.count({
-    where: { userId: recipientId, kind: "user", expiresAt: { gt: new Date() }, lastSeenAt: { gte: onlineCutoff }, user: { disabledAt: null } }
+    where: { ...activeUserSessionWhere(), userId: recipientId }
   });
   if (!online) throw new Error("The selected user is no longer online");
   await db.roomInvitation.updateMany({

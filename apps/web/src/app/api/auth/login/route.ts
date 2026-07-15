@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const { token } = await createSession(result.user.id, result.workspace.id);
-  const response = redirectToRequestHost(request, target);
+  const response = redirectToRequestHost(request, result.user.mustChangePassword ? "/app/change-password" : target);
   response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
   return response;
 }

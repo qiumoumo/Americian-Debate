@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { loadLocalEnv } from "./load-env.mjs";
 import { createInitialSharedTimer } from "../../shared/src/index.ts";
+import { normalizeLegacySessionTimestamps } from "./presence.ts";
 
 loadLocalEnv();
 const prisma = new PrismaClient();
@@ -19,6 +20,7 @@ async function uniqueCode() {
 }
 
 async function main() {
+  const normalizedSessions = await normalizeLegacySessionTimestamps(prisma);
   const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim() || "admin@debate.local";
   await prisma.user.updateMany({ where: { email: adminEmail }, data: { isSystemAdmin: true } });
   const matches = await prisma.match.findMany({ where: { room: null, deletedAt: null }, select: { id: true, userId: true, format: true } });
@@ -33,7 +35,7 @@ async function main() {
       }
     });
   }
-  console.log(`Backfilled ${matches.length} match room(s).`);
+  console.log(`Backfilled ${matches.length} match room(s); normalized ${normalizedSessions} legacy session timestamp(s).`);
 }
 
 main().finally(() => prisma.$disconnect());

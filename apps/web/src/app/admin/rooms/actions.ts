@@ -52,18 +52,3 @@ export async function adminRotateRoomCode(formData: FormData) {
   await audit(matchId, session, "room.code.rotate");
   revalidatePath("/admin/rooms");
 }
-
-export async function setSystemAdministrator(formData: FormData) {
-  const session = await requireSystemAdmin();
-  const userId = value(formData, "userId");
-  const enabled = value(formData, "enabled") === "true";
-  if (!enabled) {
-    const count = await db.user.count({ where: { isSystemAdmin: true, disabledAt: null } });
-    if (count <= 1) throw new Error("At least one system administrator is required");
-  }
-  await db.user.update({ where: { id: userId }, data: { isSystemAdmin: enabled } });
-  await db.auditLog.create({
-    data: { workspaceId: session.workspace.id, actorUserId: session.user.id, actorName: session.user.name, action: enabled ? "system_admin.grant" : "system_admin.revoke", targetType: "User", targetId: userId }
-  });
-  revalidatePath("/admin/rooms");
-}

@@ -1,21 +1,21 @@
-import { db } from "@debate/db";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminAutoRefresh } from "@/components/admin-auto-refresh";
 import { SectionCard } from "@/components/section-card";
 import { requireSystemAdmin } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
 import { listActiveRooms, listOnlineUsers } from "@/lib/rooms";
-import { adminChangeRoomMember, adminInviteToRoom, adminRotateRoomCode, adminTransferRoomOwner, setSystemAdministrator } from "./actions";
+import { adminChangeRoomMember, adminInviteToRoom, adminRotateRoomCode, adminTransferRoomOwner } from "./actions";
 
 export default async function AdminRoomsPage() {
   const session = await requireSystemAdmin();
-  const [rooms, onlineUsers, allUsers] = await Promise.all([
+  const [rooms, onlineUsers] = await Promise.all([
     listActiveRooms(),
-    listOnlineUsers(),
-    db.user.findMany({ where: { disabledAt: null }, select: { id: true, name: true, email: true, isSystemAdmin: true }, orderBy: { name: "asc" } })
+    listOnlineUsers()
   ]);
 
   return (
     <AdminShell activeHref="/admin/rooms" user={sessionShellUser(session)}>
+      <AdminAutoRefresh />
       <section className="hero"><div className="eyebrow">LAN Rooms</div><h1>活跃比赛房间</h1><p>只显示最近 30 秒内仍有成员在线的房间。</p></section>
       <SectionCard title="在线用户" description="只有系统管理员可以查看此全局名单。">
         <div className="actions">{onlineUsers.map((user) => <span className="pill" key={user.id}>{user.name} · {user.email}</span>)}{onlineUsers.length === 0 ? <p className="empty-state">当前没有在线用户。</p> : null}</div>
@@ -44,10 +44,6 @@ export default async function AdminRoomsPage() {
         ))}
         {rooms.length === 0 ? <p className="empty-state">当前没有有人的比赛房间。</p> : null}
       </div>
-      <div style={{ height: 18 }} />
-      <SectionCard title="系统管理员授权" description="系统管理员权限独立于 workspace 角色。">
-        <div className="table-like admin-table">{allUsers.map((user) => <div className="table-row" key={user.id}><div><strong>{user.name}</strong><br /><small>{user.email}</small></div><div>{user.isSystemAdmin ? "系统管理员" : "普通用户"}</div><div><form action={setSystemAdministrator}><input type="hidden" name="userId" value={user.id} /><input type="hidden" name="enabled" value={String(!user.isSystemAdmin)} /><button className="button" type="submit">{user.isSystemAdmin ? "撤销" : "授权"}</button></form></div></div>)}</div>
-      </SectionCard>
     </AdminShell>
   );
 }
