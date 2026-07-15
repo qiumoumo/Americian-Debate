@@ -101,6 +101,15 @@ Saved AI keys use `APP_ENCRYPTION_KEY` when it is at least 16 characters long. I
 
 System administrators can save multiple host-wide AI configurations from `/admin/ai`. Users can select any enabled global configuration or manage multiple private configurations from `/app/settings`; private keys and endpoints are never exposed to administrators or other users.
 
+Both configuration screens include a static, non-secret example and two server-side checks:
+
+- `Get models` requests the configured provider's `GET /models` endpoint and offers the returned model IDs for selection. For a bare compatible host, the app also checks the standard `/v1/models` path and fills the working base URL into the form.
+- `Test connection` uses the same read-only model-list request. It does not send a prompt, call chat completions, or intentionally consume generation tokens.
+
+Example values shown by the UI use `https://api.example.com/v1`, `sk-example-not-a-real-key`, and `example-chat-model`; they never include saved configuration values.
+
+Endpoint inspection blocks localhost, private-network, link-local, and cloud-metadata addresses by default. A trusted local deployment that intentionally uses a LAN or localhost AI server can set `AI_ALLOW_PRIVATE_ENDPOINTS=true`; leave it disabled for internet-facing installations.
+
 Supported providers:
 
 - `mock`: no key required.

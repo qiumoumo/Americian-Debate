@@ -5,12 +5,52 @@ import { requireSystemAdmin } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import {
   type AIConfigActionState,
+  type AIEndpointActionState,
   deleteGlobalAIConfig,
+  discoverModelsForConfig,
   readAIConfigForm,
   saveGlobalAIConfig,
   setDefaultGlobalAIConfig,
+  testConnectionForConfig,
   toActionError
 } from "@/lib/ai-config";
+
+export async function fetchGlobalAIModelsAction(formData: FormData): Promise<AIEndpointActionState> {
+  await requireSystemAdmin();
+  try {
+    const input = readAIConfigForm(formData);
+    const result = await discoverModelsForConfig(input, { scope: "GLOBAL" });
+    const adjusted = Boolean(input.baseUrl || input.providerId === "openai-compatible" || input.providerId === "openclaw")
+      && input.baseUrl.replace(/\/+$/, "") !== result.baseUrl.replace(/\/+$/, "");
+    return {
+      ok: true,
+      message: `已获取 ${result.models.length} 个模型。${adjusted ? "已找到可用的 API 地址；保存修改前请重新输入 API Key。" : ""}`,
+      models: result.models,
+      baseUrl: result.baseUrl,
+      latencyMs: result.latencyMs
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function testGlobalAIConnectionAction(formData: FormData): Promise<AIEndpointActionState> {
+  await requireSystemAdmin();
+  try {
+    const input = readAIConfigForm(formData);
+    const result = await testConnectionForConfig(input, { scope: "GLOBAL" });
+    const adjusted = Boolean(input.baseUrl || input.providerId === "openai-compatible" || input.providerId === "openclaw")
+      && input.baseUrl.replace(/\/+$/, "") !== result.baseUrl.replace(/\/+$/, "");
+    return {
+      ok: true,
+      message: `连接成功，服务端响应 ${result.latencyMs} ms。${adjusted ? "已找到可用的 API 地址；保存修改前请重新输入 API Key。" : ""}`,
+      baseUrl: result.baseUrl,
+      latencyMs: result.latencyMs
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
 
 export async function saveGlobalAIConfigAction(_state: AIConfigActionState, formData: FormData): Promise<AIConfigActionState> {
   const session = await requireSystemAdmin();

@@ -1,24 +1,64 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useId, useRef, useState, useTransition } from "react";
 import { AI_PROVIDER_CHOICES } from "@debate/ai";
-import type { AIConfigActionState, AIConfigView } from "@/lib/ai-config";
+import type { AIConfigActionState, AIConfigView, AIEndpointActionState } from "@/lib/ai-config";
 
 const initialState: AIConfigActionState = { ok: false, message: "" };
 
 interface AIConfigFormProps {
   action: (state: AIConfigActionState, formData: FormData) => Promise<AIConfigActionState>;
+  fetchModelsAction: (formData: FormData) => Promise<AIEndpointActionState>;
+  testConnectionAction: (formData: FormData) => Promise<AIEndpointActionState>;
   view?: AIConfigView | null;
   submitLabel?: string;
 }
 
-export function AIConfigForm({ action, view, submitLabel = "保存配置" }: AIConfigFormProps) {
+export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, view, submitLabel = "保存配置" }: AIConfigFormProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
-  const error = (field: string) => state.fieldErrors?.[field];
+  const [probeState, setProbeState] = useState<AIEndpointActionState | null>(null);
+  const [probeKind, setProbeKind] = useState<"models" | "connection" | null>(null);
+  const [models, setModels] = useState<string[]>([]);
+  const [probing, startProbe] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const modelListId = `ai-models-${useId().replace(/:/g, "")}`;
+  const error = (field: string) => probeState?.fieldErrors?.[field] ?? state.fieldErrors?.[field];
+
+  function runProbe(kind: "models" | "connection") {
+    const form = formRef.current;
+    if (!form) return;
+    setProbeKind(kind);
+    setProbeState(null);
+    startProbe(async () => {
+      const result = await (kind === "models" ? fetchModelsAction : testConnectionAction)(new FormData(form));
+      setProbeState(result);
+      if (!result.ok) return;
+      if (result.models?.length) {
+        setModels(result.models);
+        const modelInput = form.elements.namedItem("model") as HTMLInputElement | null;
+        if (modelInput && !modelInput.value) modelInput.value = result.models[0] ?? "";
+      }
+      if (result.baseUrl) {
+        const baseUrlInput = form.elements.namedItem("baseUrl") as HTMLInputElement | null;
+        const providerInput = form.elements.namedItem("providerId") as HTMLSelectElement | null;
+        const shouldFillBaseUrl = Boolean(baseUrlInput?.value) || providerInput?.value === "openai-compatible" || providerInput?.value === "openclaw";
+        if (baseUrlInput && shouldFillBaseUrl) baseUrlInput.value = result.baseUrl;
+      }
+    });
+  }
 
   return (
-    <form action={formAction} className="stack">
+    <form action={formAction} className="stack" ref={formRef} onSubmit={() => setProbeState(null)}>
       {view ? <input type="hidden" name="id" value={view.id} /> : null}
+      <details className="ai-config-example">
+        <summary>查看填写示例</summary>
+        <dl>
+          <div><dt>Provider</dt><dd>自定义 OpenAI 兼容端点</dd></div>
+          <div><dt>Base URL</dt><dd><code>https://api.example.com/v1</code></dd></div>
+          <div><dt>API Key</dt><dd><code>sk-example-not-a-real-key</code></dd></div>
+          <div><dt>Model</dt><dd><code>example-chat-model</code></dd></div>
+        </dl>
+      </details>
       <label className="field">
         <span>配置名称</span>
         <input name="name" type="text" defaultValue={view?.name ?? ""} placeholder="例如：团队 DeepSeek" aria-invalid={Boolean(error("name"))} />
@@ -34,7 +74,8 @@ export function AIConfigForm({ action, view, submitLabel = "保存配置" }: AIC
       </label>
       <label className="field">
         <span>Model</span>
-        <input name="model" type="text" defaultValue={view?.model ?? ""} placeholder="预设 provider 可留空" aria-invalid={Boolean(error("model"))} />
+        <input name="model" type="text" list={modelListId} defaultValue={view?.model ?? ""} placeholder="获取模型后可直接选择" aria-invalid={Boolean(error("model"))} />
+        <datalist id={modelListId}>{models.map((model) => <option value={model} key={model} />)}</datalist>
         {error("model") ? <small className="form-error">{error("model")}</small> : null}
       </label>
       <label className="field">
@@ -47,6 +88,11 @@ export function AIConfigForm({ action, view, submitLabel = "保存配置" }: AIC
         <input name="apiKey" type="password" autoComplete="off" placeholder={view?.hasKey ? "已配置（留空保持不变）" : "sk-..."} aria-invalid={Boolean(error("apiKey"))} />
         {error("apiKey") ? <small className="form-error">{error("apiKey")}</small> : null}
       </label>
+      <div className="ai-probe-actions">
+        <button className="button" type="button" disabled={probing} onClick={() => runProbe("models")}>{probing && probeKind === "models" ? "获取中…" : "获取模型"}</button>
+        <button className="button" type="button" disabled={probing} onClick={() => runProbe("connection")}>{probing && probeKind === "connection" ? "测试中…" : "测试连接"}</button>
+      </div>
+      {probeState?.message ? <p className={probeState.ok ? "form-success" : "form-error"} role="status">{probeState.message}</p> : null}
       {view?.hasKey ? (
         <label className="check-field">
           <input name="clearKey" type="checkbox" value="true" />

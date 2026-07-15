@@ -10,7 +10,9 @@ import { sessionShellUser } from "@/lib/session-props";
 import { getAIProviderConfigStatus } from "@debate/ai";
 import {
   deletePersonalAIConfigAction,
+  fetchPersonalAIModelsAction,
   savePersonalAIConfigAction,
+  testPersonalAIConnectionAction,
   updateUserAISelectionAction
 } from "./actions";
 
@@ -78,7 +80,7 @@ export default async function SettingsPage() {
 
       <div className="grid two ai-settings-grid">
         <SectionCard title="添加我的私有 AI" description="配置仅你可见；管理员和其他用户无法读取。">
-          <AIConfigForm action={savePersonalAIConfigAction} submitLabel="添加私有 AI" />
+          <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} submitLabel="添加私有 AI" />
         </SectionCard>
         <SectionCard title={`可用的全局 AI（${globalConfigs.length}）`} description="全局 API Key 和端点信息不会显示。">
           <div className="ai-public-config-list">
@@ -107,7 +109,7 @@ export default async function SettingsPage() {
                 </span>
               </summary>
               <div className="ai-config-editor">
-                <AIConfigForm action={savePersonalAIConfigAction} view={config} submitLabel="保存修改" />
+                <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} view={config} submitLabel="保存修改" />
                 <div className="ai-config-commands">
                   <AIConfigCommandForm
                     action={deletePersonalAIConfigAction}

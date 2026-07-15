@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
 import { after, describe, it } from "node:test";
 
 const databaseFileName = `ai-config-integration-${process.pid}.db`;
 const databasePath = resolve(process.cwd(), "../../prisma", databaseFileName);
 process.env.DATABASE_URL = `file:./${databaseFileName}`;
 process.env.SESSION_SECRET = "ai-config-test-session-secret";
+process.env.AI_ALLOW_PRIVATE_ENDPOINTS = "true";
 writeFileSync(databasePath, "");
 
 const dbPackageDirectory = resolve(process.cwd(), "../../packages/db");
@@ -167,6 +169,138 @@ describe("AI configuration service", () => {
     const stored = await db.aIConfig.findUniqueOrThrow({ where: { id: saved.id }, select: { apiKeyEnc: true } });
     assert.notEqual(stored.apiKeyEnc, "plain-secret");
     assert.ok(stored.apiKeyEnc);
+  });
+
+  it("uses a saved key for model discovery without exposing it to another user", async () => {
+    const server = createServer((request, response) => {
+      if (request.url === "/v1/models" && request.headers.authorization === "Bearer stored-secret") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ data: [{ id: "listed-model" }] }));
+        return;
+      }
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { message: "unauthorized" } }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not bind.");
+      const owner = await createUser("probe-owner");
+      const outsider = await createUser("probe-outsider");
+      const input = {
+        ...baseInput,
+        name: "Stored probe",
+        providerId: "openai-compatible",
+        model: "listed-model",
+        baseUrl: `http://127.0.0.1:${address.port}/v1`,
+        apiKey: "stored-secret"
+      };
+      const saved = await aiConfig.savePersonalAIConfig({ ...input, userId: owner.id });
+      const result = await aiConfig.discoverModelsForConfig(
+        { ...input, id: saved.id, apiKey: "" },
+        { scope: "PERSONAL", userId: owner.id }
+      );
+      assert.deepEqual(result.models, ["listed-model"]);
+      await assert.rejects(
+        aiConfig.discoverModelsForConfig(
+          { ...input, id: saved.id, baseUrl: `http://127.0.0.1:${address.port}/changed/v1`, apiKey: "" },
+          { scope: "PERSONAL", userId: owner.id }
+        ),
+        /API Key/
+      );
+      await assert.rejects(
+        aiConfig.savePersonalAIConfig({
+          ...input,
+          id: saved.id,
+          baseUrl: `http://127.0.0.1:${address.port}/changed/v1`,
+          apiKey: "",
+          enabled: false,
+          userId: owner.id
+        }),
+        /重新输入 API Key/
+      );
+      await assert.rejects(
+        aiConfig.discoverModelsForConfig(
+          { ...input, id: saved.id, apiKey: "" },
+          { scope: "PERSONAL", userId: outsider.id }
+        ),
+        /not found/i
+      );
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it("persists the discovered /v1 URL and uses it for the resolved AI provider", async () => {
+    const requests: Array<{ method?: string; url?: string }> = [];
+    const server = createServer((request, response) => {
+      requests.push({ method: request.method, url: request.url });
+      if (request.headers.authorization !== "Bearer runtime-secret") {
+        response.writeHead(401, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: { message: "unauthorized" } }));
+        return;
+      }
+      if (request.method === "GET" && request.url === "/v1/models") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ data: [{ id: "runtime-model" }] }));
+        return;
+      }
+      if (request.method === "POST" && request.url === "/v1/chat/completions") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({
+          id: "chatcmpl-test",
+          object: "chat.completion",
+          created: 1,
+          model: "runtime-model",
+          choices: [{ index: 0, message: { role: "assistant", content: "runtime-ok" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        }));
+        return;
+      }
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { message: "not found" } }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not bind.");
+      const admin = await createUser("runtime-admin");
+      const user = await createUser("runtime-user");
+      const rootUrl = `http://127.0.0.1:${address.port}`;
+      const draft = await aiConfig.saveGlobalAIConfig({
+        ...baseInput,
+        name: "Runtime compatible",
+        providerId: "openai-compatible",
+        model: "runtime-model",
+        baseUrl: rootUrl,
+        apiKey: "runtime-secret",
+        updatedByUserId: admin.id
+      });
+      const discovered = await aiConfig.discoverModelsForConfig(
+        { ...baseInput, id: draft.id, name: draft.name, providerId: draft.providerId, model: draft.model, baseUrl: rootUrl, apiKey: "" },
+        { scope: "GLOBAL" }
+      );
+      assert.equal(discovered.baseUrl, `${rootUrl}/v1`);
+      const saved = await aiConfig.saveGlobalAIConfig({
+        ...baseInput,
+        id: draft.id,
+        name: draft.name,
+        providerId: draft.providerId,
+        model: discovered.models[0] ?? "",
+        baseUrl: discovered.baseUrl,
+        apiKey: "runtime-secret",
+        updatedByUserId: admin.id
+      });
+      await aiConfig.setDefaultGlobalAIConfig(saved.id);
+
+      const resolved = await aiConfig.resolveAIProvider({ userId: user.id, workspaceId: "unused" });
+      const reply = await resolved.provider.chat({ messages: [{ role: "user", content: "local test" }] });
+      assert.equal(reply.text, "runtime-ok");
+      assert.ok(requests.some((request) => request.method === "GET" && request.url === "/v1/models"));
+      assert.ok(requests.some((request) => request.method === "POST" && request.url === "/v1/chat/completions"));
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
   });
 
   it("backfills legacy workspace and user configs idempotently", async () => {

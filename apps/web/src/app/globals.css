@@ -2297,6 +2297,15 @@ a.timeline-item:hover {
 .button:disabled { cursor: wait; opacity: .62; }
 .compact-table .table-row { min-height: 48px; }
 .ai-selection-form { align-content: start; }
+.ai-config-example { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-strong); }
+.ai-config-example > summary { cursor: pointer; font-weight: 800; }
+.ai-config-example dl { display: grid; gap: 7px; margin: 12px 0 0; }
+.ai-config-example dl > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.ai-config-example dt { color: var(--muted); font-size: .78rem; font-weight: 700; }
+.ai-config-example dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.ai-config-example code { white-space: normal; letter-spacing: 0; }
+.ai-probe-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ai-probe-actions .button { width: 100%; }
 
 @media (max-width: 720px) {
   .room-meta-row { grid-template-columns: 1fr; }
@@ -2306,6 +2315,7 @@ a.timeline-item:hover {
   .ai-config-row > summary { align-items: flex-start; flex-direction: column; }
   .ai-config-editor { grid-template-columns: 1fr; }
   .ai-config-row .actions { gap: 6px; }
+  .ai-config-example dl > div, .ai-probe-actions { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {

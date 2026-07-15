@@ -7,6 +7,11 @@ import {
   getConfiguredAIModel,
   resolveConfigModel
 } from "@debate/ai";
+import {
+  AIEndpointError,
+  discoverAIModels,
+  testAIEndpointConnection
+} from "./ai-endpoint.ts";
 import { decryptSecret, encryptSecret } from "./crypto.ts";
 
 export type AISource = "personal" | "global" | "env";
@@ -48,6 +53,12 @@ export interface AIConfigActionState {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
+}
+
+export interface AIEndpointActionState extends AIConfigActionState {
+  models?: string[];
+  baseUrl?: string;
+  latencyMs?: number;
 }
 
 export class AIConfigValidationError extends Error {
@@ -101,6 +112,25 @@ function resolveApiKeyEnc(input: AIConfigInput, existing: string | null): string
   if (input.clearKey) return null;
   if (input.apiKey) return encryptSecret(input.apiKey);
   return existing;
+}
+
+function sameConfiguredEndpoint(input: AIConfigInput, existing: Pick<AIConfig, "providerId" | "baseUrl">) {
+  const normalize = (value: string | null | undefined) => String(value ?? "").trim().replace(/\/+$/, "");
+  return parseProviderId(input.providerId) === parseProviderId(existing.providerId)
+    && normalize(input.baseUrl) === normalize(existing.baseUrl);
+}
+
+function reusableStoredKey(input: AIConfigInput, existing: AIConfig | null) {
+  return existing?.apiKeyEnc && sameConfiguredEndpoint(input, existing) ? existing.apiKeyEnc : null;
+}
+
+function validateStoredKeyTransition(input: AIConfigInput, existing: AIConfig | null) {
+  if (existing?.apiKeyEnc && !sameConfiguredEndpoint(input, existing) && !input.apiKey && !input.clearKey) {
+    throw new AIConfigValidationError(
+      "修改 Provider 或 Base URL 后必须重新输入 API Key。",
+      { apiKey: "请重新输入密钥；如不再需要旧密钥，可勾选清除。" }
+    );
+  }
 }
 
 function validateInput(input: AIConfigInput, existingKey: string | null) {
@@ -177,8 +207,10 @@ export async function saveGlobalAIConfig(input: AIConfigInput & { updatedByUserI
       ? await tx.aIConfig.findFirst({ where: { id: input.id, scope: "GLOBAL" } })
       : null;
     if (input.id && !existing) throw new AIConfigValidationError("Global AI configuration not found.");
-    validateInput(input, existing?.apiKeyEnc ?? null);
-    const apiKeyEnc = resolveApiKeyEnc(input, existing?.apiKeyEnc ?? null);
+    validateStoredKeyTransition(input, existing);
+    const existingKey = reusableStoredKey(input, existing);
+    validateInput(input, existingKey);
+    const apiKeyEnc = resolveApiKeyEnc(input, existingKey);
     const data = {
       name: input.name,
       providerId: parseProviderId(input.providerId),
@@ -212,8 +244,10 @@ export async function savePersonalAIConfig(input: AIConfigInput & { userId: stri
       ? await tx.aIConfig.findFirst({ where: { id: input.id, scope: "PERSONAL", ownerUserId: input.userId } })
       : null;
     if (input.id && !existing) throw new AIConfigValidationError("Personal AI configuration not found.");
-    validateInput(input, existing?.apiKeyEnc ?? null);
-    const apiKeyEnc = resolveApiKeyEnc(input, existing?.apiKeyEnc ?? null);
+    validateStoredKeyTransition(input, existing);
+    const existingKey = reusableStoredKey(input, existing);
+    validateInput(input, existingKey);
+    const apiKeyEnc = resolveApiKeyEnc(input, existingKey);
     const data = {
       name: input.name,
       providerId: parseProviderId(input.providerId),
@@ -292,6 +326,40 @@ export async function saveUserAISelection(userId: string, input: { mode: AISelec
   });
 }
 
+type AIConfigEndpointAccess =
+  | { scope: "GLOBAL" }
+  | { scope: "PERSONAL"; userId: string };
+
+async function endpointInput(input: AIConfigInput, access: AIConfigEndpointAccess) {
+  const existing = input.id
+    ? await db.aIConfig.findFirst({
+        where: {
+          id: input.id,
+          scope: access.scope,
+          ...(access.scope === "PERSONAL" ? { ownerUserId: access.userId } : {})
+        }
+      })
+    : null;
+  if (input.id && !existing) throw new AIConfigValidationError("AI configuration not found.");
+  const storedKey = existing?.apiKeyEnc && !input.clearKey && sameConfiguredEndpoint(input, existing)
+    ? decryptSecret(existing.apiKeyEnc)
+    : "";
+  return {
+    providerId: parseProviderId(input.providerId),
+    baseUrl: input.baseUrl,
+    apiKey: input.apiKey || storedKey,
+    allowPrivateNetwork: process.env.AI_ALLOW_PRIVATE_ENDPOINTS === "true"
+  };
+}
+
+export async function discoverModelsForConfig(input: AIConfigInput, access: AIConfigEndpointAccess) {
+  return discoverAIModels(await endpointInput(input, access));
+}
+
+export async function testConnectionForConfig(input: AIConfigInput, access: AIConfigEndpointAccess) {
+  return testAIEndpointConnection(await endpointInput(input, access));
+}
+
 function buildProvider(record: AIConfig, source: Exclude<AISource, "env">): ResolvedAI {
   const providerId = parseProviderId(record.providerId);
   const apiKey = record.apiKeyEnc ? decryptSecret(record.apiKeyEnc) : undefined;
@@ -336,7 +404,7 @@ export async function resolveAIProvider({ userId, workspaceId }: { userId: strin
 }
 
 export function toActionError(error: unknown): AIConfigActionState {
-  if (error instanceof AIConfigValidationError) {
+  if (error instanceof AIConfigValidationError || error instanceof AIEndpointError) {
     return { ok: false, message: error.message, fieldErrors: error.fieldErrors };
   }
   const message = error instanceof Error && /APP_ENCRYPTION_KEY|SESSION_SECRET/.test(error.message)

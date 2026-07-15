@@ -9,8 +9,10 @@ import { sessionShellUser } from "@/lib/session-props";
 import { getAIProviderConfigStatus } from "@debate/ai";
 import {
   deleteGlobalAIConfigAction,
+  fetchGlobalAIModelsAction,
   saveGlobalAIConfigAction,
-  setDefaultGlobalAIConfigAction
+  setDefaultGlobalAIConfigAction,
+  testGlobalAIConnectionAction
 } from "./actions";
 
 export default async function AdminAiPage() {
@@ -31,7 +33,7 @@ export default async function AdminAiPage() {
 
       <div className="grid two ai-admin-grid">
         <SectionCard title="添加全局 AI" description="API Key 加密保存在服务器，不会发送到客户端。">
-          <AIConfigForm action={saveGlobalAIConfigAction} submitLabel="添加全局 AI" />
+          <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} submitLabel="添加全局 AI" />
         </SectionCard>
         <SectionCard title="服务器兜底" description="没有可用的全局默认配置时使用。">
           <div className="table-like compact-table">
@@ -57,7 +59,7 @@ export default async function AdminAiPage() {
                 </span>
               </summary>
               <div className="ai-config-editor">
-                <AIConfigForm action={saveGlobalAIConfigAction} view={config} submitLabel="保存修改" />
+                <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} view={config} submitLabel="保存修改" />
                 <div className="ai-config-commands">
                   {!config.isDefault && config.enabled ? (
                     <AIConfigCommandForm action={setDefaultGlobalAIConfigAction} configId={config.id} label="设为全局默认" pendingLabel="切换中…" />
