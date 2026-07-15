@@ -10,6 +10,7 @@ const databasePath = resolve(process.cwd(), "../../prisma", databaseFileName);
 process.env.DATABASE_URL = `file:./${databaseFileName}`;
 process.env.SESSION_SECRET = "ai-config-test-session-secret";
 process.env.AI_ALLOW_PRIVATE_ENDPOINTS = "true";
+process.env.AI_MODEL_DISCOVERY_ENABLED = "true";
 writeFileSync(databasePath, "");
 
 const dbPackageDirectory = resolve(process.cwd(), "../../packages/db");
@@ -44,6 +45,40 @@ after(async () => {
 });
 
 describe("AI configuration service", () => {
+  it("blocks model discovery without making a network request when the deployment capability is disabled", async () => {
+    let requestCount = 0;
+    const server = createServer((_request, response) => {
+      requestCount += 1;
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ data: [{ id: "should-not-be-read" }] }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const previous = process.env.AI_MODEL_DISCOVERY_ENABLED;
+    process.env.AI_MODEL_DISCOVERY_ENABLED = "false";
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not bind.");
+      await assert.rejects(
+        aiConfig.discoverModelsForConfig(
+          {
+            ...baseInput,
+            name: "Locked discovery",
+            providerId: "openai-compatible",
+            model: "manual-model",
+            baseUrl: `http://127.0.0.1:${address.port}/v1`,
+            apiKey: "test-key"
+          },
+          { scope: "GLOBAL" }
+        ),
+        /需要服务器接入公网/
+      );
+      assert.equal(requestCount, 0);
+    } finally {
+      process.env.AI_MODEL_DISCOVERY_ENABLED = previous;
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
   it("stores multiple global configs and keeps exactly one enabled default", async () => {
     const admin = await createUser("global-admin");
     const first = await aiConfig.saveGlobalAIConfig({ ...baseInput, name: "Primary", updatedByUserId: admin.id });
@@ -178,6 +213,14 @@ describe("AI configuration service", () => {
         response.end(JSON.stringify({ data: [{ id: "listed-model" }] }));
         return;
       }
+      if (request.url === "/v1/chat/completions" && request.headers.authorization === "Bearer stored-secret") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({
+          model: "listed-model",
+          choices: [{ index: 0, message: { role: "assistant", content: "OK" }, finish_reason: "stop" }]
+        }));
+        return;
+      }
       response.writeHead(401, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: { message: "unauthorized" } }));
     });
@@ -201,6 +244,11 @@ describe("AI configuration service", () => {
         { scope: "PERSONAL", userId: owner.id }
       );
       assert.deepEqual(result.models, ["listed-model"]);
+      const connected = await aiConfig.testConnectionForConfig(
+        { ...input, id: saved.id, apiKey: "" },
+        { scope: "PERSONAL", userId: owner.id }
+      );
+      assert.equal(connected.ok, true);
       await assert.rejects(
         aiConfig.discoverModelsForConfig(
           { ...input, id: saved.id, baseUrl: `http://127.0.0.1:${address.port}/changed/v1`, apiKey: "" },
@@ -221,6 +269,13 @@ describe("AI configuration service", () => {
       );
       await assert.rejects(
         aiConfig.discoverModelsForConfig(
+          { ...input, id: saved.id, apiKey: "" },
+          { scope: "PERSONAL", userId: outsider.id }
+        ),
+        /not found/i
+      );
+      await assert.rejects(
+        aiConfig.testConnectionForConfig(
           { ...input, id: saved.id, apiKey: "" },
           { scope: "PERSONAL", userId: outsider.id }
         ),

@@ -2,7 +2,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { AIConfigCommandForm } from "@/components/ai-config-command-form";
 import { AIConfigForm } from "@/components/ai-config-form";
 import { SectionCard } from "@/components/section-card";
-import { getGlobalAIConfigs } from "@/lib/ai-config";
+import { getGlobalAIConfigs, isAIModelDiscoveryEnabled } from "@/lib/ai-config";
 import { requireSystemAdmin } from "@/lib/auth";
 import { getGlobalAIUsageLogs } from "@/lib/data";
 import { sessionShellUser } from "@/lib/session-props";
@@ -22,6 +22,7 @@ export default async function AdminAiPage() {
     getGlobalAIUsageLogs()
   ]);
   const envStatus = getAIProviderConfigStatus();
+  const modelDiscoveryEnabled = isAIModelDiscoveryEnabled();
 
   return (
     <AdminShell activeHref="/admin/ai" user={sessionShellUser(session)}>
@@ -33,7 +34,7 @@ export default async function AdminAiPage() {
 
       <div className="grid two ai-admin-grid">
         <SectionCard title="添加全局 AI" description="API Key 加密保存在服务器，不会发送到客户端。">
-          <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} submitLabel="添加全局 AI" />
+          <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} submitLabel="添加全局 AI" />
         </SectionCard>
         <SectionCard title="服务器兜底" description="没有可用的全局默认配置时使用。">
           <div className="table-like compact-table">
@@ -59,7 +60,7 @@ export default async function AdminAiPage() {
                 </span>
               </summary>
               <div className="ai-config-editor">
-                <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} view={config} submitLabel="保存修改" />
+                <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} view={config} submitLabel="保存修改" />
                 <div className="ai-config-commands">
                   {!config.isDefault && config.enabled ? (
                     <AIConfigCommandForm action={setDefaultGlobalAIConfigAction} configId={config.id} label="设为全局默认" pendingLabel="切换中…" />

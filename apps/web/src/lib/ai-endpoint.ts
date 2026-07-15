@@ -1,4 +1,4 @@
-import { THIRD_PARTY_PROVIDERS } from "@debate/ai";
+import { AIProviderError, createAIProviderFromConfig, THIRD_PARTY_PROVIDERS } from "@debate/ai";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
@@ -6,6 +6,7 @@ export interface AIEndpointInput {
   providerId: string;
   baseUrl: string;
   apiKey: string;
+  model: string;
   allowPrivateNetwork?: boolean;
 }
 
@@ -183,13 +184,23 @@ async function assertSafeEndpoint(baseUrl: string, allowPrivateNetwork: boolean)
   }
 }
 
-async function inspectAIEndpoint(input: AIEndpointInput, requireModels: boolean): Promise<AIEndpointResult> {
+function validateCredentials(input: AIEndpointInput, requireModel = false) {
   if (input.providerId === "mock") {
-    return { ok: true, models: ["mock-local"], baseUrl: "", latencyMs: 0 };
+    return;
   }
   if (!input.apiKey.trim()) {
     throw new AIEndpointError("请先填写 API Key。", { apiKey: "新配置需要填写密钥；已保存配置可留空使用原密钥。" });
   }
+  if (requireModel && !input.model.trim()) {
+    throw new AIEndpointError("请先填写模型名称。", { model: "测试连接需要指定要使用的模型。" });
+  }
+}
+
+async function discoverModels(input: AIEndpointInput): Promise<AIEndpointResult> {
+  if (input.providerId === "mock") {
+    return { ok: true, models: ["mock-local"], baseUrl: "", latencyMs: 0 };
+  }
+  validateCredentials(input);
 
   const candidates = baseUrlCandidates(input.providerId, input.baseUrl);
   let lastFailure = "无法连接到模型列表端点。";
@@ -218,10 +229,6 @@ async function inspectAIEndpoint(input: AIEndpointInput, requireModels: boolean)
         throw new AIEndpointError(lastFailure);
       }
 
-      if (!requireModels) {
-        await response.body?.cancel();
-        return { ok: true, models: [], baseUrl, latencyMs };
-      }
       const payload = await readJsonLimited(response, 1024 * 1024).catch((error) => {
         if (error instanceof AIEndpointError) throw error;
         return null;
@@ -247,9 +254,135 @@ async function inspectAIEndpoint(input: AIEndpointInput, requireModels: boolean)
 }
 
 export function discoverAIModels(input: AIEndpointInput) {
-  return inspectAIEndpoint(input, true);
+  return discoverModels(input);
 }
 
-export function testAIEndpointConnection(input: AIEndpointInput) {
-  return inspectAIEndpoint(input, false);
+function chatFailure(status: number, detail: string) {
+  const suffix = detail ? `：${detail}` : "";
+  if (status === 401 || status === 403) {
+    return new AIEndpointError("API Key 未通过验证，请检查密钥或账号权限。", { apiKey: "服务端拒绝了此密钥。" });
+  }
+  if (/model|模型/i.test(detail)) {
+    return new AIEndpointError(`模型不可用（HTTP ${status}）${suffix}`, { model: "请检查模型名称以及当前密钥是否有权使用该模型。" });
+  }
+  return new AIEndpointError(`聊天接口返回 HTTP ${status}${suffix}`, {
+    baseUrl: status === 404 || status === 405 ? "请确认 Base URL 指向兼容的聊天 API，例如 https://api.example.com/v1。" : "请检查服务端返回的错误信息。"
+  });
+}
+
+function errorChain(error: unknown) {
+  const chain: unknown[] = [];
+  let current = error;
+  while (current && !chain.includes(current)) {
+    chain.push(current);
+    current = typeof current === "object" && "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return chain;
+}
+
+function endpointErrorFromChain(error: unknown) {
+  return errorChain(error).find((item): item is AIEndpointError => item instanceof AIEndpointError);
+}
+
+function providerFailure(error: unknown) {
+  if (!(error instanceof AIProviderError)) {
+    return {
+      status: undefined,
+      error: new AIEndpointError("网络连接失败，请检查 URL、服务器公网、代理或服务状态。", { baseUrl: "服务器无法连接到此 AI 地址。" })
+    };
+  }
+  if (error.status) return { status: error.status, error: chatFailure(error.status, error.message.slice(0, 240)) };
+  if (["empty-response", "provider"].includes(error.code)) {
+    return {
+      status: undefined,
+      error: new AIEndpointError("服务端已响应，但返回内容不是兼容的聊天结果。", { baseUrl: "请确认此地址提供兼容的聊天接口。" })
+    };
+  }
+  const timeout = error.code === "timeout";
+  return {
+    status: undefined,
+    error: new AIEndpointError(
+      timeout ? "连接超时（15 秒）。" : "网络连接失败，请检查 URL、服务器公网、代理或服务状态。",
+      { baseUrl: timeout ? "聊天接口未在限定时间内响应。" : "服务器无法连接到此 AI 地址。" }
+    )
+  };
+}
+
+function limitedProbeFetch(maxBytes: number): typeof globalThis.fetch {
+  return async (resource, init) => {
+    const response = await fetch(resource, { ...init, redirect: "error" });
+    const declaredLength = Number(response.headers.get("content-length") ?? 0);
+    if (declaredLength > maxBytes) {
+      await response.body?.cancel();
+      throw new AIEndpointError("服务端响应过大，已停止读取。");
+    }
+    if (!response.body) return response;
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new AIEndpointError("服务端响应过大，已停止读取。");
+      }
+      chunks.push(value);
+    }
+    const body = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      body.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
+  };
+}
+
+export async function testAIEndpointConnection(input: AIEndpointInput, options: { timeoutMs?: number } = {}): Promise<AIEndpointResult> {
+  if (input.providerId === "mock") {
+    return { ok: true, models: [], baseUrl: "", latencyMs: 0 };
+  }
+  validateCredentials(input, true);
+
+  const candidates = baseUrlCandidates(input.providerId, input.baseUrl);
+  const timeoutMs = Math.min(15_000, Math.max(1, Math.round(options.timeoutMs ?? 15_000)));
+  let lastFailure: AIEndpointError | null = null;
+  for (const baseUrl of candidates) {
+    const startedAt = performance.now();
+    try {
+      await assertSafeEndpoint(baseUrl, Boolean(input.allowPrivateNetwork));
+      const provider = createAIProviderFromConfig({
+        providerId: input.providerId,
+        apiKey: input.apiKey,
+        baseURL: baseUrl,
+        model: input.model,
+        fetch: limitedProbeFetch(1024 * 1024),
+        maxRetries: 0
+      });
+      await provider.chat({
+        messages: [{ role: "user", content: "Reply with OK." }],
+        maxOutputTokens: 8,
+        timeoutMs
+      });
+      const latencyMs = Math.max(0, Math.round(performance.now() - startedAt));
+      return { ok: true, models: [], baseUrl, latencyMs };
+    } catch (error) {
+      if (error instanceof AIEndpointError) throw error;
+      const nestedEndpointError = endpointErrorFromChain(error);
+      if (nestedEndpointError) throw nestedEndpointError;
+      const failure = providerFailure(error);
+      if ((failure.status === 404 || failure.status === 405) && baseUrl !== candidates.at(-1)) {
+        lastFailure = failure.error;
+        continue;
+      }
+      throw failure.error;
+    }
+  }
+  throw lastFailure ?? new AIEndpointError("无法连接到聊天接口。", { baseUrl: "请检查 Base URL。" });
 }

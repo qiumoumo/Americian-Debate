@@ -348,11 +348,19 @@ async function endpointInput(input: AIConfigInput, access: AIConfigEndpointAcces
     providerId: parseProviderId(input.providerId),
     baseUrl: input.baseUrl,
     apiKey: input.apiKey || storedKey,
+    model: resolveConfigModel(input.providerId, input.model),
     allowPrivateNetwork: process.env.AI_ALLOW_PRIVATE_ENDPOINTS === "true"
   };
 }
 
+export function isAIModelDiscoveryEnabled() {
+  return process.env.AI_MODEL_DISCOVERY_ENABLED === "true";
+}
+
 export async function discoverModelsForConfig(input: AIConfigInput, access: AIConfigEndpointAccess) {
+  if (!isAIModelDiscoveryEnabled()) {
+    throw new AIEndpointError("此功能需要服务器接入公网。如有条件，请联系技术人员解封。");
+  }
   return discoverAIModels(await endpointInput(input, access));
 }
 

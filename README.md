@@ -101,10 +101,12 @@ Saved AI keys use `APP_ENCRYPTION_KEY` when it is at least 16 characters long. I
 
 System administrators can save multiple host-wide AI configurations from `/admin/ai`. Users can select any enabled global configuration or manage multiple private configurations from `/app/settings`; private keys and endpoints are never exposed to administrators or other users.
 
-Both configuration screens include a static, non-secret example and two server-side checks:
+Both configuration screens include a static, non-secret example and two independent server-side checks:
 
-- `Get models` requests the configured provider's `GET /models` endpoint and offers the returned model IDs for selection. For a bare compatible host, the app also checks the standard `/v1/models` path and fills the working base URL into the form.
-- `Test connection` uses the same read-only model-list request. It does not send a prompt, call chat completions, or intentionally consume generation tokens.
+- `Get models` is locked by default. A deployment with working DNS and HTTPS outbound access can set `AI_MODEL_DISCOVERY_ENABLED=true`; the app then requests `GET /models`, also checks `/v1/models` for a bare compatible host, and offers returned model IDs for selection.
+- `Test connection` sends a minimal real request to the configured model through its chat endpoint. This validates the URL, key, model, and runtime-compatible response, and may incur a very small provider charge.
+
+Model discovery and connection testing are optional. Neither one is required to save, enable, select, or use a manually entered configuration. If model discovery remains locked, clicking its control explains that server internet access and a technical administrator are required to enable it.
 
 Example values shown by the UI use `https://api.example.com/v1`, `sk-example-not-a-real-key`, and `example-chat-model`; they never include saved configuration values.
 

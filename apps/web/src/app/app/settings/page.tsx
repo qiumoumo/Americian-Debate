@@ -4,7 +4,7 @@ import { AIConfigForm } from "@/components/ai-config-form";
 import { AISelectionForm } from "@/components/ai-selection-form";
 import { ProviderHealthCard } from "@/components/provider-health-card";
 import { SectionCard } from "@/components/section-card";
-import { getGlobalAIConfigs, getUserAIConfigs, getUserAISelection } from "@/lib/ai-config";
+import { getGlobalAIConfigs, getUserAIConfigs, getUserAISelection, isAIModelDiscoveryEnabled } from "@/lib/ai-config";
 import { requireUser } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
 import { getAIProviderConfigStatus } from "@debate/ai";
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
     getUserAISelection(session.user.id)
   ]);
   const enabledPersonal = personalConfigs.filter((config) => config.enabled);
+  const modelDiscoveryEnabled = isAIModelDiscoveryEnabled();
   const selected = selection.mode === "CONFIG"
     ? [...globalConfigs, ...enabledPersonal].find((config) => config.id === selection.configId)
     : null;
@@ -80,7 +81,7 @@ export default async function SettingsPage() {
 
       <div className="grid two ai-settings-grid">
         <SectionCard title="添加我的私有 AI" description="配置仅你可见；管理员和其他用户无法读取。">
-          <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} submitLabel="添加私有 AI" />
+          <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} submitLabel="添加私有 AI" />
         </SectionCard>
         <SectionCard title={`可用的全局 AI（${globalConfigs.length}）`} description="全局 API Key 和端点信息不会显示。">
           <div className="ai-public-config-list">
@@ -109,7 +110,7 @@ export default async function SettingsPage() {
                 </span>
               </summary>
               <div className="ai-config-editor">
-                <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} view={config} submitLabel="保存修改" />
+                <AIConfigForm action={savePersonalAIConfigAction} fetchModelsAction={fetchPersonalAIModelsAction} testConnectionAction={testPersonalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} view={config} submitLabel="保存修改" />
                 <div className="ai-config-commands">
                   <AIConfigCommandForm
                     action={deletePersonalAIConfigAction}

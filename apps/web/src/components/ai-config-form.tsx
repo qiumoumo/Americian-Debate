@@ -10,11 +10,12 @@ interface AIConfigFormProps {
   action: (state: AIConfigActionState, formData: FormData) => Promise<AIConfigActionState>;
   fetchModelsAction: (formData: FormData) => Promise<AIEndpointActionState>;
   testConnectionAction: (formData: FormData) => Promise<AIEndpointActionState>;
+  modelDiscoveryEnabled: boolean;
   view?: AIConfigView | null;
   submitLabel?: string;
 }
 
-export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, view, submitLabel = "保存配置" }: AIConfigFormProps) {
+export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, modelDiscoveryEnabled, view, submitLabel = "保存配置" }: AIConfigFormProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const [probeState, setProbeState] = useState<AIEndpointActionState | null>(null);
   const [probeKind, setProbeKind] = useState<"models" | "connection" | null>(null);
@@ -25,6 +26,11 @@ export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, 
   const error = (field: string) => probeState?.fieldErrors?.[field] ?? state.fieldErrors?.[field];
 
   function runProbe(kind: "models" | "connection") {
+    if (kind === "models" && !modelDiscoveryEnabled) {
+      setProbeKind("models");
+      setProbeState({ ok: false, message: "此功能需要服务器接入公网。如有条件，请联系技术人员解封。" });
+      return;
+    }
     const form = formRef.current;
     if (!form) return;
     setProbeKind(kind);
@@ -89,9 +95,18 @@ export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, 
         {error("apiKey") ? <small className="form-error">{error("apiKey")}</small> : null}
       </label>
       <div className="ai-probe-actions">
-        <button className="button" type="button" disabled={probing} onClick={() => runProbe("models")}>{probing && probeKind === "models" ? "获取中…" : "获取模型"}</button>
+        <button
+          className={`button${modelDiscoveryEnabled ? "" : " is-locked"}`}
+          type="button"
+          disabled={probing}
+          aria-disabled={!modelDiscoveryEnabled || probing}
+          onClick={() => runProbe("models")}
+        >
+          {probing && probeKind === "models" ? "获取中…" : "获取模型"}
+        </button>
         <button className="button" type="button" disabled={probing} onClick={() => runProbe("connection")}>{probing && probeKind === "connection" ? "测试中…" : "测试连接"}</button>
       </div>
+      <small className="ai-connection-cost-note">测试连接会发送一次极小的真实模型请求，可能产生少量费用。</small>
       {probeState?.message ? <p className={probeState.ok ? "form-success" : "form-error"} role="status">{probeState.message}</p> : null}
       {view?.hasKey ? (
         <label className="check-field">
