@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "node src/prisma-cli.mjs generate",
     "prisma:push": "node src/prisma-cli.mjs db push --skip-generate",
+    "rooms:backfill": "node --experimental-strip-types src/backfill-rooms.mjs",
     "prisma:seed": "node src/seed.mjs"
   },
   "dependencies": {

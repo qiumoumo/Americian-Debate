@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateEvidence, type Evidence, type Side } from "@debate/shared";
 import { addEvidenceToMatch, removeEvidenceFromMatch } from "@/app/app/documents/evidence-actions";
@@ -24,6 +24,10 @@ export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: Evid
   // 本地乐观维护已关联集合，避免每次操作等一次整页刷新。
   const [linked, setLinked] = useState<Set<string>>(new Set(linkedIds));
   const [undo, setUndo] = useState<{ message: string; onUndo: () => void } | null>(null);
+
+  useEffect(() => {
+    setLinked(new Set(linkedIds));
+  }, [linkedIds]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -113,7 +117,13 @@ export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: Evid
                 </div>
                 <strong>{card.title}</strong>
                 <p className="library-claim">{card.claim}</p>
-                <p className="library-source">{card.publication ?? card.author ?? "Unlisted"} · {card.publishedDate ?? "No date"}</p>
+                <p className="library-uploader">
+                  {card.isMine ? "我上传" : `由 ${card.uploaderName ?? "未知用户"} / ${card.uploaderWorkspaceName ?? "未知工作区"} 上传`}
+                </p>
+                <p className="library-source">
+                  {card.author ?? "Unknown author"} · {card.publication ?? "Unknown publication"} · {card.publishedDate ?? "No date"}
+                </p>
+                {card.sourceUrl ? <a className="library-source-link" href={card.sourceUrl} target="_blank" rel="noreferrer">打开原始来源</a> : null}
               </div>
               {matchId ? (
                 <div className="library-item-action">

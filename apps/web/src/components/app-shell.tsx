@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { userNavigation } from "@/lib/navigation";
+import { PresenceAgent } from "@/components/presence-agent";
 
 interface AppShellProps {
   activeHref?: string;
@@ -18,6 +19,7 @@ export function AppShell({ activeHref, children, note, user }: AppShellProps) {
 
   return (
     <div className="page-shell">
+      {user ? <PresenceAgent /> : null}
       <aside className="sidebar">
         <Link href="/" className="brand" aria-label="美辩 home">
           <span className="brand-mark">美</span>

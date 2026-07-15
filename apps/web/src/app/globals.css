@@ -2234,6 +2234,39 @@ a.timeline-item:hover {
   cursor: pointer;
 }
 
+/* LAN match rooms */
+.room-invite-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 58%);
+}
+
+.room-invite-dialog {
+  width: min(460px, 100%);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 28%);
+}
+
+.room-invite-dialog h2 { margin: 10px 0 6px; font-size: 1.25rem; }
+.room-live-panel, .room-management { display: grid; gap: 16px; }
+.room-management { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.room-meta-row { display: grid; grid-template-columns: minmax(150px, .35fr) 1fr; gap: 18px; align-items: start; }
+.room-meta-row > div { display: grid; gap: 6px; }
+.room-code { font-size: 1.45rem; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.library-uploader { margin: 5px 0 0; color: var(--accent-ink); font-size: .82rem; font-weight: 700; }
+.status-error { padding: 10px 12px; border-left: 3px solid #b42318; background: #fff1f0; color: #8f1d14; }
+
+@media (max-width: 720px) {
+  .room-meta-row { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 720px) {
   .import-grid {
     grid-template-columns: 1fr;

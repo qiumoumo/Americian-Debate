@@ -58,6 +58,7 @@ corepack pnpm install
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
 corepack pnpm --filter @debate/db prisma:seed
+corepack pnpm --filter @debate/db rooms:backfill
 corepack pnpm dev
 ```
 
@@ -140,7 +141,10 @@ When changing Prisma models, run:
 ```bash
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
+corepack pnpm --filter @debate/db rooms:backfill
 ```
+
+LAN HTTP is the default. Set `COOKIE_SECURE=true` only when the host is served through HTTPS.
 
 ## Safety Notes
 

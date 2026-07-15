@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@debate/db";
+import { hasSystemAdminAccess } from "@/lib/admin-policy";
 
 export const SESSION_COOKIE = "debate_session";
 export const ADMIN_SESSION_COOKIE = "debate_admin_session";
@@ -10,7 +11,9 @@ export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
+  // LAN deployments use plain HTTP by default. Set COOKIE_SECURE=true only
+  // when the host is actually served through HTTPS.
+  secure: process.env.COOKIE_SECURE === "true",
   path: "/",
   maxAge: SESSION_COOKIE_MAX_AGE_SECONDS
 };
@@ -103,12 +106,12 @@ export async function verifyCredentials(email: string, password: string) {
 }
 
 /**
- * Verifies credentials AND requires an admin-capable role (OWNER / COACH).
+ * Verifies credentials and requires host-level system administrator access.
  */
 export async function verifyAdminCredentials(email: string, password: string) {
   const result = await verifyCredentials(email, password);
   if (!result) return null;
-  if (result.role !== "OWNER" && result.role !== "COACH") return null;
+  if (!hasSystemAdminAccess(result.user)) return null;
   return result;
 }
 
@@ -141,6 +144,7 @@ async function readSession(cookieName: string, kind: SessionKind) {
   if (!membership || membership.workspace.deletedAt || membership.user.disabledAt) return null;
 
   return {
+    sessionId: session.id,
     user: membership.user,
     workspace: membership.workspace,
     role: membership.role,
@@ -154,12 +158,12 @@ export function getSession() {
 
 /**
  * Reads the admin session from the dedicated admin cookie. Requires an
- * admin-capable role (OWNER / COACH); a user session cannot grant admin access.
+ * system administrator status; a user session cannot grant admin access.
  */
 export async function getAdminSession() {
   const session = await readSession(ADMIN_SESSION_COOKIE, "admin");
   if (!session) return null;
-  if (session.role !== "OWNER" && session.role !== "COACH") return null;
+  if (!hasSystemAdminAccess(session.user)) return null;
   return session;
 }
 
@@ -177,4 +181,17 @@ export async function requireAdmin() {
     redirect("/admin/login");
   }
   return session;
+}
+
+export const requireSystemAdmin = requireAdmin;
+
+export async function touchCurrentUserSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!token) return false;
+  const result = await db.session.updateMany({
+    where: { token, kind: "user", expiresAt: { gt: new Date() } },
+    data: { lastSeenAt: new Date() }
+  });
+  return result.count === 1;
 }

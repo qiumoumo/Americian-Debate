@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, limitString, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { mapEvidence } from "@/lib/data";
+import { requireRoomAccess } from "@/lib/rooms";
 
 const MAX_BODY_BYTES = 64_000;
 const MAX_EVIDENCE_IDS = 8;
@@ -55,17 +56,17 @@ export async function POST(request: Request) {
       return jsonError(`Opponent context 最多 ${MAX_OPPONENT_CONTEXT_LENGTH} 个字符。`, 400);
     }
 
-    if (body.matchId) {
-      const match = await db.match.findFirst({ where: { id: body.matchId, workspaceId: session.workspace.id, deletedAt: null } });
-      if (!match) {
-        return jsonError("Match not found", 404);
-      }
+    if (!body.matchId) {
+      return jsonError("Match is required", 400);
     }
+    const match = await db.match.findFirst({ where: { id: body.matchId, deletedAt: null } });
+    if (!match) return jsonError("Match not found", 404);
+    await requireRoomAccess(match.id, session.user.id, session.user.isSystemAdmin);
 
     const evidenceRecords = await db.evidence.findMany({
       where: {
         id: { in: evidenceIds },
-        document: { workspaceId: session.workspace.id, deletedAt: null }
+        document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } }
       }
     });
 

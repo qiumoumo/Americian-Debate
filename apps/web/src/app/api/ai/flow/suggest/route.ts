@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, limitString, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { mapEvidence } from "@/lib/data";
+import { requireRoomAccess } from "@/lib/rooms";
 
 const MAX_BODY_BYTES = 64_000;
 const MAX_EVIDENCE_IDS = 12;
@@ -54,19 +55,19 @@ export async function POST(request: Request) {
 
     const flowContext = limitString(body.flowContext, MAX_FLOW_CONTEXT_LENGTH);
 
-    if (body.matchId) {
-      const match = await db.match.findFirst({ where: { id: body.matchId, workspaceId: session.workspace.id, deletedAt: null } });
-      if (!match) {
-        return jsonError("Match not found", 404);
-      }
+    if (!body.matchId) {
+      return jsonError("Match is required", 400);
     }
+    const match = await db.match.findFirst({ where: { id: body.matchId, deletedAt: null } });
+    if (!match) return jsonError("Match not found", 404);
+    await requireRoomAccess(match.id, session.user.id, session.user.isSystemAdmin);
 
     const evidenceIds = parseEvidenceIds(body.evidenceIds);
     const evidenceRecords = evidenceIds.length
       ? await db.evidence.findMany({
           where: {
             id: { in: evidenceIds },
-            document: { workspaceId: session.workspace.id, deletedAt: null }
+            document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } }
           }
         })
       : [];

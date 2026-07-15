@@ -104,7 +104,7 @@ export async function createEvidence(formData: FormData) {
   const session = await requireUser();
   const documentId = requiredText(formData, "documentId");
   const document = await db.document.findFirst({
-    where: { id: documentId, workspaceId: session.workspace.id, deletedAt: null },
+    where: { id: documentId, workspaceId: session.workspace.id, deletedAt: null, ...(session.user.isSystemAdmin ? {} : { ownerId: session.user.id }) },
     select: { id: true }
   });
 

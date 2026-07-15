@@ -200,8 +200,8 @@ async function main() {
 
   const user = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
-    update: { name: ADMIN_NAME, passwordHash },
-    create: { email: ADMIN_EMAIL, name: ADMIN_NAME, passwordHash }
+    update: { name: ADMIN_NAME, passwordHash, isSystemAdmin: true },
+    create: { email: ADMIN_EMAIL, name: ADMIN_NAME, passwordHash, isSystemAdmin: true }
   });
 
   const workspace = await prisma.workspace.upsert({

@@ -1,6 +1,6 @@
 import { db } from "@debate/db";
 import type { FlowColumn, PracticeSessionSummary } from "@debate/shared";
-import { mapDocument, mapEvidence, mapFlowRow, mapLibraryRound, mapMatch, mapPrismaFormat, mapPrismaSide, readStringArray } from "@/lib/mappers";
+import { mapDocument, mapEvidence, mapFlowRow, mapLibraryRound, mapMatch, mapPrismaFormat, mapPrismaSide, readStringArray } from "./mappers.ts";
 
 export async function getDocumentsForWorkspace(workspaceId: string) {
   const documents = await db.document.findMany({
@@ -12,20 +12,33 @@ export async function getDocumentsForWorkspace(workspaceId: string) {
   return documents.map(mapDocument);
 }
 
-export async function getEvidenceForWorkspace(workspaceId: string) {
+export async function getEvidenceForWorkspace(workspaceId: string, userId?: string) {
   const evidence = await db.evidence.findMany({
-    where: { document: { workspaceId, deletedAt: null } },
-    include: { document: true },
+    where: userId
+      ? { document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } }
+      : { document: { workspaceId, deletedAt: null } },
+    include: { document: { include: { owner: true, workspace: true } } },
     orderBy: { updatedAt: "desc" }
   });
-
-  return evidence.map(mapEvidence);
+  const mapped = evidence.map((record) => ({
+    ...mapEvidence(record),
+    uploaderId: record.document.ownerId,
+    uploaderName: record.document.owner.name,
+    uploaderWorkspaceName: record.document.workspace.name,
+    isMine: record.document.ownerId === userId,
+    updatedAt: record.updatedAt
+  }));
+  mapped.sort((left, right) => Number(right.isMine) - Number(left.isMine) || right.updatedAt.getTime() - left.updatedAt.getTime());
+  return mapped.map(({ updatedAt, ...record }) => {
+    void updatedAt;
+    return record;
+  });
 }
 
 /** 已关联到某场比赛的 evidence id 列表（用于 library 面板标记「已加入」）。 */
-export async function getMatchEvidenceIds(matchId: string, workspaceId: string) {
+export async function getMatchEvidenceIds(matchId: string, userId: string) {
   const links = await db.matchEvidence.findMany({
-    where: { matchId, match: { workspaceId, deletedAt: null } },
+    where: { matchId, match: { deletedAt: null, room: { members: { some: { userId, status: "ACTIVE" } } } } },
     select: { evidenceId: true }
   });
   return links.map((link) => link.evidenceId);
@@ -78,9 +91,9 @@ export async function getLatestMatchWorkspace(workspaceId: string) {
   });
 }
 
-export async function getMatchById(matchId: string, workspaceId: string) {
+export async function getMatchById(matchId: string, userId: string) {
   return db.match.findFirst({
-    where: { id: matchId, workspaceId, deletedAt: null },
+    where: { id: matchId, deletedAt: null, room: { members: { some: { userId, status: "ACTIVE" } } } },
     include: {
       speechNotes: { orderBy: { speechOrder: "asc" } },
       notes: { orderBy: { createdAt: "desc" } }
@@ -88,9 +101,9 @@ export async function getMatchById(matchId: string, workspaceId: string) {
   });
 }
 
-export async function getFlowForMatch(matchId: string, workspaceId: string) {
+export async function getFlowForMatch(matchId: string, userId: string) {
   const match = await db.match.findFirst({
-    where: { id: matchId, workspaceId, deletedAt: null },
+    where: { id: matchId, deletedAt: null, room: { members: { some: { userId, status: "ACTIVE" } } } },
     include: {
       speechNotes: { orderBy: { speechOrder: "asc" } },
       flowRows: {
