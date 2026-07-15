@@ -112,6 +112,8 @@ Example values shown by the UI use `https://api.example.com/v1`, `sk-example-not
 
 Endpoint inspection blocks localhost, private-network, link-local, and cloud-metadata addresses by default. A trusted local deployment that intentionally uses a LAN or localhost AI server can set `AI_ALLOW_PRIVATE_ENDPOINTS=true`; leave it disabled for internet-facing installations.
 
+If the server cannot open outbound HTTPS directly, set `HTTPS_PROXY` and keep `NO_PROXY=localhost,127.0.0.1` in `.env.local`, then restart the app. On Node.js 22.21 or newer the AI provider enables the runtime proxy after Next.js loads the environment file, so both connection tests and normal AI requests use the same route. An `EACCES`/`EPERM` connection error means the Node.js process itself is blocked from outbound network access; allow outbound TCP 443 in the host firewall or sandbox, or provide a reachable HTTPS proxy.
+
 Supported providers:
 
 - `mock`: no key required.

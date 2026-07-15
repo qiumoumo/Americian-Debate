@@ -75,14 +75,29 @@ export class AIProviderError extends Error {
   code: AIProviderErrorCode;
   providerId?: AIProviderId;
   status?: number;
+  systemCode?: string;
 
-  constructor(code: AIProviderErrorCode, message: string, options: { providerId?: AIProviderId; status?: number; cause?: unknown } = {}) {
+  constructor(code: AIProviderErrorCode, message: string, options: { providerId?: AIProviderId; status?: number; systemCode?: string; cause?: unknown } = {}) {
     super(message, { cause: options.cause });
     this.name = "AIProviderError";
     this.code = code;
     this.providerId = options.providerId;
     this.status = options.status;
+    this.systemCode = options.systemCode;
   }
+}
+
+function errorSystemCode(error: unknown) {
+  const visited: unknown[] = [];
+  let current = error;
+  while (current && !visited.includes(current)) {
+    visited.push(current);
+    if (typeof current === "object" && "code" in current && typeof (current as { code?: unknown }).code === "string") {
+      return (current as { code: string }).code;
+    }
+    current = typeof current === "object" && "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return undefined;
 }
 
 async function providerRequest<T>(providerId: AIProviderId, request: () => Promise<T>) {
@@ -94,6 +109,7 @@ async function providerRequest<T>(providerId: AIProviderId, request: () => Promi
       ? (error as { status: number }).status
       : undefined;
     const message = error instanceof Error ? error.message : "AI provider request failed.";
+    const systemCode = errorSystemCode(error);
     const code: AIProviderErrorCode = status === 401 || status === 403
       ? "authentication"
       : /model|模型/i.test(message)
@@ -103,7 +119,7 @@ async function providerRequest<T>(providerId: AIProviderId, request: () => Promi
           : status === undefined
             ? "network"
             : "provider";
-    throw new AIProviderError(code, message, { providerId, status, cause: error });
+    throw new AIProviderError(code, message, { providerId, status, systemCode, cause: error });
   }
 }
 

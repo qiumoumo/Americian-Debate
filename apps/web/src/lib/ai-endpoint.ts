@@ -1,6 +1,7 @@
 import { AIProviderError, createAIProviderFromConfig, THIRD_PARTY_PROVIDERS } from "@debate/ai";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { configureAIOutboundProxy } from "./ai-outbound-proxy.ts";
 
 export interface AIEndpointInput {
   providerId: string;
@@ -201,6 +202,7 @@ async function discoverModels(input: AIEndpointInput): Promise<AIEndpointResult>
     return { ok: true, models: ["mock-local"], baseUrl: "", latencyMs: 0 };
   }
   validateCredentials(input);
+  configureAIOutboundProxy();
 
   const candidates = baseUrlCandidates(input.providerId, input.baseUrl);
   let lastFailure = "无法连接到模型列表端点。";
@@ -299,11 +301,22 @@ function providerFailure(error: unknown) {
     };
   }
   const timeout = error.code === "timeout";
+  const permissionDenied = error.systemCode === "EACCES" || error.systemCode === "EPERM";
   return {
     status: undefined,
     error: new AIEndpointError(
-      timeout ? "连接超时（15 秒）。" : "网络连接失败，请检查 URL、服务器公网、代理或服务状态。",
-      { baseUrl: timeout ? "聊天接口未在限定时间内响应。" : "服务器无法连接到此 AI 地址。" }
+      timeout
+        ? "连接超时（15 秒）。"
+        : permissionDenied
+          ? "服务器进程没有公网访问权限。"
+          : "网络连接失败，请检查 URL、服务器公网、代理或服务状态。",
+      {
+        baseUrl: timeout
+          ? "聊天接口未在限定时间内响应。"
+          : permissionDenied
+            ? "请允许 Node.js 出站访问 HTTPS，或配置 HTTPS_PROXY 后重启服务。"
+            : "服务器无法连接到此 AI 地址。"
+      }
     )
   };
 }
@@ -349,6 +362,7 @@ export async function testAIEndpointConnection(input: AIEndpointInput, options: 
     return { ok: true, models: [], baseUrl: "", latencyMs: 0 };
   }
   validateCredentials(input, true);
+  configureAIOutboundProxy();
 
   const candidates = baseUrlCandidates(input.providerId, input.baseUrl);
   const timeoutMs = Math.min(15_000, Math.max(1, Math.round(options.timeoutMs ?? 15_000)));

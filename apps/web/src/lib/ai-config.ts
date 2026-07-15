@@ -7,6 +7,7 @@ import {
   getConfiguredAIModel,
   resolveConfigModel
 } from "@debate/ai";
+import { configureAIOutboundProxy } from "./ai-outbound-proxy.ts";
 import {
   AIEndpointError,
   discoverAIModels,
@@ -369,6 +370,7 @@ export async function testConnectionForConfig(input: AIConfigInput, access: AICo
 }
 
 function buildProvider(record: AIConfig, source: Exclude<AISource, "env">): ResolvedAI {
+  configureAIOutboundProxy();
   const providerId = parseProviderId(record.providerId);
   const apiKey = record.apiKeyEnc ? decryptSecret(record.apiKeyEnc) : undefined;
   const model = resolveConfigModel(providerId, record.model);
@@ -382,6 +384,7 @@ function buildProvider(record: AIConfig, source: Exclude<AISource, "env">): Reso
 }
 
 function resolveFromEnv(): ResolvedAI {
+  configureAIOutboundProxy();
   const provider = createAIProviderFromEnv();
   return {
     provider,

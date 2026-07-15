@@ -269,6 +269,32 @@ describe("AI endpoint inspection", () => {
     );
   });
 
+  it("reports an outbound network permission denial instead of a generic connection error", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      const error = new Error("connect EACCES 64.83.18.27:443") as Error & { code: string };
+      error.code = "EACCES";
+      throw error;
+    }) as typeof globalThis.fetch;
+    try {
+      const { testAIEndpointConnection } = await import("./ai-endpoint.ts");
+      await assert.rejects(
+        testAIEndpointConnection({
+          providerId: "openai-compatible",
+          baseUrl: `${baseUrl}/v1`,
+          apiKey: "test-key",
+          model: "model-alpha",
+          allowPrivateNetwork: true
+        }),
+        (error: unknown) => error instanceof Error
+          && /没有公网访问权限/.test(error.message)
+          && /HTTPS_PROXY/.test((error as { fieldErrors?: Record<string, string> }).fieldErrors?.baseUrl ?? "")
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("blocks private endpoints by default and caps remote response sizes", async () => {
     const { discoverAIModels } = await import("./ai-endpoint.ts");
     await assert.rejects(
