@@ -20,9 +20,10 @@ export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, 
   const [probeState, setProbeState] = useState<AIEndpointActionState | null>(null);
   const [probeKind, setProbeKind] = useState<"models" | "connection" | null>(null);
   const [models, setModels] = useState<string[]>([]);
+  const [selectedDiscoveredModel, setSelectedDiscoveredModel] = useState("");
   const [probing, startProbe] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const modelListId = `ai-models-${useId().replace(/:/g, "")}`;
+  const modelInputId = `ai-model-${useId().replace(/:/g, "")}`;
   const error = (field: string) => probeState?.fieldErrors?.[field] ?? state.fieldErrors?.[field];
 
   function runProbe(kind: "models" | "connection") {
@@ -42,7 +43,11 @@ export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, 
       if (result.models?.length) {
         setModels(result.models);
         const modelInput = form.elements.namedItem("model") as HTMLInputElement | null;
-        if (modelInput && !modelInput.value) modelInput.value = result.models[0] ?? "";
+        if (modelInput) {
+          const nextModel = modelInput.value || result.models[0] || "";
+          if (!modelInput.value) modelInput.value = nextModel;
+          setSelectedDiscoveredModel(result.models.includes(nextModel) ? nextModel : "");
+        }
       }
       if (result.baseUrl) {
         const baseUrlInput = form.elements.namedItem("baseUrl") as HTMLInputElement | null;
@@ -78,12 +83,33 @@ export function AIConfigForm({ action, fetchModelsAction, testConnectionAction, 
           ))}
         </select>
       </label>
-      <label className="field">
-        <span>Model</span>
-        <input name="model" type="text" list={modelListId} defaultValue={view?.model ?? ""} placeholder="获取模型后可直接选择" aria-invalid={Boolean(error("model"))} />
-        <datalist id={modelListId}>{models.map((model) => <option value={model} key={model} />)}</datalist>
+      <div className="field">
+        <label htmlFor={modelInputId}>Model</label>
+        <input
+          id={modelInputId}
+          name="model"
+          type="text"
+          defaultValue={view?.model ?? ""}
+          placeholder="可手工填写或从已获取模型中选择"
+          aria-invalid={Boolean(error("model"))}
+          onChange={(event) => setSelectedDiscoveredModel(models.includes(event.target.value) ? event.target.value : "")}
+        />
+        {models.length ? (
+          <select
+            aria-label="选择已获取的模型"
+            value={selectedDiscoveredModel}
+            onChange={(event) => {
+              const modelInput = formRef.current?.elements.namedItem("model") as HTMLInputElement | null;
+              if (modelInput) modelInput.value = event.target.value;
+              setSelectedDiscoveredModel(event.target.value);
+            }}
+          >
+            <option value="" disabled>选择已获取的模型（{models.length}）</option>
+            {models.map((model) => <option value={model} key={model}>{model}</option>)}
+          </select>
+        ) : null}
         {error("model") ? <small className="form-error">{error("model")}</small> : null}
-      </label>
+      </div>
       <label className="field">
         <span>Base URL</span>
         <input name="baseUrl" type="url" defaultValue={view?.baseUrl ?? ""} placeholder="https://api.example.com/v1" aria-invalid={Boolean(error("baseUrl"))} />
