@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { userNavigation } from "@/lib/navigation";
 import { PresenceAgent } from "@/components/presence-agent";
+import { ReliableLink } from "@/components/reliable-link";
 
 interface AppShellProps {
   activeHref?: string;
@@ -38,10 +39,10 @@ export function AppShell({ activeHref, children, note, user }: AppShellProps) {
         ) : null}
         <nav className="nav-group" aria-label="Primary navigation">
           {navigation.map((item) => (
-            <Link key={item.href} className="nav-link" href={item.href} data-active={activeHref === item.href}>
+            <ReliableLink key={item.href} className="nav-link" href={item.href} data-active={activeHref === item.href}>
               <span>{item.label}</span>
               <span>{item.badge}</span>
-            </Link>
+            </ReliableLink>
           ))}
         </nav>
         <div className="sidebar-note">

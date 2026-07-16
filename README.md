@@ -114,6 +114,34 @@ Endpoint inspection blocks localhost, private-network, link-local, and cloud-met
 
 If the server cannot open outbound HTTPS directly, set `HTTPS_PROXY` and keep `NO_PROXY=localhost,127.0.0.1` in `.env.local`, then restart the app. On Node.js 22.21 or newer the AI provider enables the runtime proxy after Next.js loads the environment file, so both connection tests and normal AI requests use the same route. An `EACCES`/`EPERM` connection error means the Node.js process itself is blocked from outbound network access; allow outbound TCP 443 in the host firewall or sandbox, or provide a reachable HTTPS proxy.
 
+### Windows: allow Node.js outbound HTTPS
+
+Run PowerShell as Administrator. Set `AI_HOST` to the hostname from the configured Base URL, then create a narrowly scoped outbound rule for the current Node.js executable, resolved server IP, and TCP port 443:
+
+```powershell
+$AI_HOST = "qzq.zerohillqq.top"
+$NODE_PATH = (Get-Command node -ErrorAction Stop).Source
+$AI_IP = (Resolve-DnsName $AI_HOST -Type A -ErrorAction Stop |
+  Where-Object IPAddress |
+  Select-Object -First 1 -ExpandProperty IPAddress)
+
+New-NetFirewallRule `
+  -DisplayName "Debate AI HTTPS" `
+  -Direction Outbound `
+  -Action Allow `
+  -Protocol TCP `
+  -Program $NODE_PATH `
+  -RemoteAddress $AI_IP `
+  -RemotePort 443 `
+  -Profile Any
+
+Test-NetConnection $AI_HOST -Port 443
+```
+
+`TcpTestSucceeded` must be `True`. Restart the app after changing the firewall or proxy configuration. If the rule already exists, inspect it with `Get-NetFirewallRule -DisplayName "Debate AI HTTPS"`; remove and recreate only that named rule when the provider IP or Node.js installation path changes. A host sandbox or corporate network policy can still override Windows Firewall rules, in which case run the app outside that sandbox or use the approved `HTTPS_PROXY` route.
+
+Never commit `.env.local`, `api.txt`, SQLite database files, API keys, session secrets, or proxy credentials. The repository `.gitignore` excludes these local files; verify staged files with `git status` before every push.
+
 Supported providers:
 
 - `mock`: no key required.
