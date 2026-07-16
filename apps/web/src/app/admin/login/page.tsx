@@ -12,7 +12,7 @@ export default async function AdminLoginPage({
       <section className="hero login-hero">
         <div className="eyebrow">网站管理端</div>
         <h1>管理员登录</h1>
-        <p>仅 OWNER / COACH 角色可进入管理端，管理队伍、权限、资料库和 AI 审计。</p>
+        <p>仅主机系统管理员可进入管理端，管理在线用户、比赛房间、权限、资料库和 AI 审计。</p>
       </section>
 
       <div className="grid two">

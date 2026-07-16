@@ -9,7 +9,7 @@
     "build": "corepack pnpm --filter @debate/web build",
     "typecheck": "corepack pnpm -r typecheck",
     "lint": "corepack pnpm --filter @debate/web lint",
-    "test": "corepack pnpm --filter @debate/ai test"
+    "test": "corepack pnpm --filter @debate/shared test && corepack pnpm --filter @debate/web test && corepack pnpm --filter @debate/ai test"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1"

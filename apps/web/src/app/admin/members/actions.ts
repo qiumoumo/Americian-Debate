@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, type Role } from "@debate/db";
-import { hashPassword, requireAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 
 const allowedRoles: Role[] = ["OWNER", "COACH", "DEBATER", "VIEWER"];
@@ -123,71 +123,6 @@ export async function revokeInvitation(formData: FormData) {
   await db.invitation.deleteMany({
     where: { id: invitationId, workspaceId: session.workspace.id, acceptedAt: null }
   });
-  revalidatePath("/admin/members");
-}
-
-export async function resetMemberPassword(formData: FormData) {
-  const session = await requireAdmin();
-  const membershipId = String(formData.get("membershipId") ?? "").trim();
-
-  const membership = await db.membership.findFirst({
-    where: { id: membershipId, workspaceId: session.workspace.id },
-    include: { user: true }
-  });
-  if (!membership) {
-    throw new Error("Membership not found.");
-  }
-  // COACH cannot reset an OWNER's password.
-  if (session.role !== "OWNER" && membership.role === "OWNER") {
-    redirect("/admin/members?error=forbidden");
-  }
-
-  const tempPassword = randomBytes(6).toString("base64url"); // 8 chars, meets MIN_PASSWORD_LENGTH
-  const passwordHash = await hashPassword(tempPassword);
-
-  await db.user.update({ where: { id: membership.userId }, data: { passwordHash } });
-  // Force re-login everywhere for that user.
-  await db.session.deleteMany({ where: { userId: membership.userId } });
-
-  revalidatePath("/admin/members");
-  redirect(`/admin/members?reset=${encodeURIComponent(membership.user.email)}&temp=${encodeURIComponent(tempPassword)}`);
-}
-
-export async function setMemberDisabled(formData: FormData) {
-  const session = await requireOwner();
-  const membershipId = String(formData.get("membershipId") ?? "").trim();
-  const disabled = String(formData.get("disabled") ?? "") === "true";
-
-  const membership = await db.membership.findFirst({
-    where: { id: membershipId, workspaceId: session.workspace.id }
-  });
-  if (!membership) {
-    throw new Error("Membership not found.");
-  }
-  if (membership.userId === session.user.id) {
-    redirect("/admin/members?error=self");
-  }
-  if (disabled) {
-    await assertNotLastOwner(session.workspace.id, membership);
-  }
-
-  await db.user.update({
-    where: { id: membership.userId },
-    data: { disabledAt: disabled ? new Date() : null }
-  });
-  if (disabled) {
-    await db.session.deleteMany({ where: { userId: membership.userId } });
-  }
-
-  await recordAudit({
-    workspaceId: session.workspace.id,
-    actorUserId: session.user.id,
-    actorName: session.user.name,
-    action: disabled ? "member.disable" : "member.enable",
-    targetType: "user",
-    targetId: membership.userId
-  });
-
   revalidatePath("/admin/members");
 }
 

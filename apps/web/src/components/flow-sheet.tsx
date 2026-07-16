@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type {
   Evidence,
   FlowCell,
@@ -101,6 +101,33 @@ export function FlowSheet({ matchId, columns, rows: initialRows, evidence }: Flo
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [, startTransition] = useTransition();
+  const dirtyRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    setRows((current) => initialRows.map((remoteRow) => {
+      const localRow = current.find((row) => row.id === remoteRow.id);
+      if (!localRow) return remoteRow;
+      const weighing = dirtyRef.current.has(`weigh:${remoteRow.id}`) ? localRow.weighing : remoteRow.weighing;
+      return {
+        ...remoteRow,
+        weighing,
+        cells: remoteRow.cells.map((remoteCell) => {
+          const localCell = localRow.cells.find((cell) => cell.id === remoteCell.id);
+          if (!localCell) return remoteCell;
+          const base = dirtyRef.current.has(`cell:${remoteCell.id}`)
+            ? { ...remoteCell, content: localCell.content, status: localCell.status, evidenceIds: localCell.evidenceIds }
+            : remoteCell;
+          return {
+            ...base,
+            responses: remoteCell.responses.map((remoteResponse) => {
+              const localResponse = localCell.responses.find((response) => response.id === remoteResponse.id);
+              return localResponse && dirtyRef.current.has(`response:${remoteResponse.id}`) ? localResponse : remoteResponse;
+            })
+          };
+        })
+      };
+    }));
+  }, [initialRows]);
 
   const evidenceById = useMemo(() => new Map(evidence.map((card) => [card.id, card])), [evidence]);
 
@@ -111,11 +138,12 @@ export function FlowSheet({ matchId, columns, rows: initialRows, evidence }: Flo
     formData.set("status", cell.status);
     formData.set("evidenceIds", JSON.stringify(cell.evidenceIds));
     startTransition(() => {
-      void saveFlowCell(formData);
+      void saveFlowCell(formData).then(() => dirtyRef.current.delete(`cell:${cell.id}`));
     });
   }
 
   function updateCell(cellId: string, patch: Partial<FlowCell>, persist: boolean) {
+    if (!persist) dirtyRef.current.add(`cell:${cellId}`);
     setRows((current) =>
       current.map((row) => ({
         ...row,
@@ -166,12 +194,13 @@ export function FlowSheet({ matchId, columns, rows: initialRows, evidence }: Flo
     formData.set("kind", response.kind);
     formData.set("evidenceIds", JSON.stringify(response.evidenceIds));
     startTransition(() => {
-      void saveFlowResponse(formData);
+      void saveFlowResponse(formData).then(() => dirtyRef.current.delete(`response:${response.id}`));
     });
     void cellId;
   }
 
   function updateResponse(cellId: string, responseId: string, patch: Partial<FlowResponse>, persist: boolean) {
+    if (!persist) dirtyRef.current.add(`response:${responseId}`);
     setRows((current) =>
       current.map((row) => ({
         ...row,
@@ -222,11 +251,12 @@ export function FlowSheet({ matchId, columns, rows: initialRows, evidence }: Flo
     formData.set("timeframe", weighingValue.timeframe);
     formData.set("scope", weighingValue.scope);
     startTransition(() => {
-      void saveFlowWeighing(formData);
+      void saveFlowWeighing(formData).then(() => dirtyRef.current.delete(`weigh:${rowId}`));
     });
   }
 
   function updateWeighing(rowId: string, patch: Partial<FlowWeighing>, persist: boolean) {
+    if (!persist) dirtyRef.current.add(`weigh:${rowId}`);
     setRows((current) =>
       current.map((row) => {
         if (row.id !== rowId) {

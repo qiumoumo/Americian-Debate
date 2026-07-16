@@ -2234,6 +2234,92 @@ a.timeline-item:hover {
   cursor: pointer;
 }
 
+/* LAN match rooms */
+.room-invite-stack {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 80;
+  width: min(420px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.room-invite-dialog {
+  width: 100%;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 28%);
+  pointer-events: auto;
+}
+
+.room-invite-dialog h2 { margin: 10px 0 6px; font-size: 1.25rem; }
+.room-live-panel, .room-management { display: grid; gap: 16px; }
+.room-management { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.room-meta-row { display: grid; grid-template-columns: minmax(150px, .35fr) 1fr; gap: 18px; align-items: start; }
+.room-meta-row > div { display: grid; gap: 6px; }
+.room-code { font-size: 1.45rem; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.library-uploader { margin: 5px 0 0; color: var(--accent-ink); font-size: .82rem; font-weight: 700; }
+.status-error { padding: 10px 12px; border-left: 3px solid #b42318; background: #fff1f0; color: #8f1d14; }
+
+/* Global account administration */
+.account-filter { display: grid; grid-template-columns: minmax(220px, 1fr) 190px auto; gap: 10px; align-items: end; }
+.account-list { display: grid; gap: 10px; }
+.account-row { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.account-summary { display: flex; justify-content: space-between; gap: 18px; padding: 16px; align-items: center; }
+.account-details { border-top: 1px solid var(--line); padding: 12px 16px 16px; }
+.account-details > summary, .danger-zone > summary { cursor: pointer; font-weight: 700; }
+.account-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.account-detail-grid > div { display: grid; gap: 3px; }
+.account-detail-grid span { color: var(--muted); font-size: .8rem; }
+.membership-list, .account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: flex-start; }
+.account-reset-control { display: grid; gap: 8px; }
+.temporary-password { display: grid; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #f4fff7; }
+.temporary-password code { font-size: 1rem; font-weight: 800; }
+.danger-zone { margin-top: 16px; padding: 12px; border: 1px solid #e4a4a0; border-radius: 6px; background: #fff7f6; }
+
+/* Saved AI configuration libraries */
+.ai-config-list, .ai-public-config-list { display: grid; gap: 10px; }
+.ai-config-row { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.ai-config-row > summary { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 15px 16px; cursor: pointer; list-style-position: inside; }
+.ai-config-summary-main { display: inline-grid; gap: 3px; min-width: 0; }
+.ai-config-summary-main small, .ai-public-config-row small { color: var(--muted); overflow-wrap: anywhere; }
+.ai-config-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .32fr); gap: 20px; padding: 18px 16px; border-top: 1px solid var(--line); }
+.ai-config-commands { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.inline-action-form { display: grid; gap: 7px; }
+.ai-public-config-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.ai-public-config-row:last-child { border-bottom: 0; }
+.ai-public-config-row > div { display: grid; gap: 3px; min-width: 0; }
+.form-error { color: #a12a20; font-size: .8rem; font-weight: 700; }
+.form-success { color: #18764a; font-size: .8rem; font-weight: 700; }
+.field input[aria-invalid="true"] { border-color: #c84b40; }
+.button:disabled { cursor: wait; opacity: .62; }
+.compact-table .table-row { min-height: 48px; }
+.ai-selection-form { align-content: start; }
+.ai-config-example { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-strong); }
+.ai-config-example > summary { cursor: pointer; font-weight: 800; }
+.ai-config-example dl { display: grid; gap: 7px; margin: 12px 0 0; }
+.ai-config-example dl > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.ai-config-example dt { color: var(--muted); font-size: .78rem; font-weight: 700; }
+.ai-config-example dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.ai-config-example code { white-space: normal; letter-spacing: 0; }
+.ai-probe-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ai-probe-actions .button { width: 100%; }
+.ai-probe-actions .button.is-locked { cursor: not-allowed; opacity: .56; }
+.ai-connection-cost-note { color: var(--ink-muted); line-height: 1.5; }
+
+@media (max-width: 720px) {
+  .room-meta-row { grid-template-columns: 1fr; }
+  .room-invite-stack { top: 10px; right: 10px; width: calc(100vw - 20px); }
+  .account-filter, .account-detail-grid { grid-template-columns: 1fr; }
+  .account-summary { align-items: flex-start; flex-direction: column; }
+  .ai-config-row > summary { align-items: flex-start; flex-direction: column; }
+  .ai-config-editor { grid-template-columns: 1fr; }
+  .ai-config-row .actions { gap: 6px; }
+  .ai-config-example dl > div, .ai-probe-actions { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 720px) {
   .import-grid {
     grid-template-columns: 1fr;

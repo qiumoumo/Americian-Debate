@@ -1,60 +1,99 @@
 import { AdminShell } from "@/components/admin-shell";
-import { SectionCard } from "@/components/section-card";
+import { AIConfigCommandForm } from "@/components/ai-config-command-form";
 import { AIConfigForm } from "@/components/ai-config-form";
-import { requireAdmin } from "@/lib/auth";
+import { SectionCard } from "@/components/section-card";
+import { getGlobalAIConfigs, isAIModelDiscoveryEnabled } from "@/lib/ai-config";
+import { requireSystemAdmin } from "@/lib/auth";
+import { getGlobalAIUsageLogs } from "@/lib/data";
 import { sessionShellUser } from "@/lib/session-props";
-import { getAdminDashboard } from "@/lib/data";
-import { getWorkspaceAIConfigView } from "@/lib/ai-config";
 import { getAIProviderConfigStatus } from "@debate/ai";
-import { updateWorkspaceAIConfig } from "./actions";
+import {
+  deleteGlobalAIConfigAction,
+  fetchGlobalAIModelsAction,
+  saveGlobalAIConfigAction,
+  setDefaultGlobalAIConfigAction,
+  testGlobalAIConnectionAction
+} from "./actions";
 
 export default async function AdminAiPage() {
-  const session = await requireAdmin();
-  const [workspaceConfig, dashboard] = await Promise.all([
-    getWorkspaceAIConfigView(session.workspace.id),
-    getAdminDashboard(session.workspace.id)
+  const session = await requireSystemAdmin();
+  const [configs, aiLogs] = await Promise.all([
+    getGlobalAIConfigs({ includeDisabled: true }),
+    getGlobalAIUsageLogs()
   ]);
-  const canEdit = session.role === "OWNER";
   const envStatus = getAIProviderConfigStatus();
+  const modelDiscoveryEnabled = isAIModelDiscoveryEnabled();
 
   return (
     <AdminShell activeHref="/admin/ai" user={sessionShellUser(session)}>
       <section className="hero">
         <div className="eyebrow">AI</div>
-        <h1>AI 配置与审计</h1>
-        <p>部署一套全员共用的 workspace AI；成员也可在「用户设置」里配置自己的私有 AI（对管理员不可见）。</p>
+        <h1>全局 AI 配置</h1>
+        <p>维护所有注册用户可选的 AI。启用的配置会出现在客户端，默认项用于自动回退。</p>
       </section>
 
-      <div className="grid two">
-        <SectionCard
-          title="Workspace AI（全员共用）"
-          description={canEdit ? "启用后，未配置私有 AI 的成员都会使用这套配置。密钥加密存储。" : "仅 OWNER 可修改；COACH 只读。"}
-        >
-          <AIConfigForm action={updateWorkspaceAIConfig} view={workspaceConfig} canEdit={canEdit} submitLabel="保存 workspace AI" />
+      <div className="grid two ai-admin-grid">
+        <SectionCard title="添加全局 AI" description="API Key 加密保存在服务器，不会发送到客户端。">
+          <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} submitLabel="添加全局 AI" />
         </SectionCard>
-
-        <SectionCard title="解析优先级" description="每次 AI 请求按此顺序选择 provider。">
-          <div className="timeline">
-            <div className="timeline-item"><strong>1. 用户私有 AI</strong><p>成员自己配置且启用时优先使用，管理员不可见。</p></div>
-            <div className="timeline-item"><strong>2. Workspace AI</strong><p>本页配置且启用时，作为全员默认。</p></div>
-            <div className="timeline-item"><strong>3. 服务器环境变量</strong><p>兜底：.env.local 中的 AI_PROVIDER（当前：{envStatus.providerId}）。</p></div>
+        <SectionCard title="服务器兜底" description="没有可用的全局默认配置时使用。">
+          <div className="table-like compact-table">
+            <div className="table-row"><div><strong>Provider</strong></div><div>{envStatus.providerId}</div><div /></div>
+            <div className="table-row"><div><strong>Model</strong></div><div>{envStatus.model || "—"}</div><div /></div>
+            <div className="table-row"><div><strong>状态</strong></div><div><span className="pill">{envStatus.configured ? "已配置" : "需检查"}</span></div><div /></div>
           </div>
         </SectionCard>
       </div>
 
       <div style={{ height: 18 }} />
 
-      <SectionCard title="AI 用量审计" description="仅统计 workspace / 环境变量 AI 的用量；成员私有 AI 的用量不在此显示。">
+      <SectionCard title={`已保存的全局 AI（${configs.length}）`} description="客户端只能看到已启用项；同一时间恰有一套启用配置作为全局默认。">
+        <div className="ai-config-list">
+          {configs.map((config) => (
+            <details className="ai-config-row" key={config.id}>
+              <summary>
+                <span className="ai-config-summary-main"><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></span>
+                <span className="actions">
+                  {config.isDefault ? <span className="pill">全局默认</span> : null}
+                  <span className="pill">{config.enabled ? "已启用" : "已停用"}</span>
+                  <span className="pill">Key {config.hasKey ? "已配置" : "未配置"}</span>
+                </span>
+              </summary>
+              <div className="ai-config-editor">
+                <AIConfigForm action={saveGlobalAIConfigAction} fetchModelsAction={fetchGlobalAIModelsAction} testConnectionAction={testGlobalAIConnectionAction} modelDiscoveryEnabled={modelDiscoveryEnabled} view={config} submitLabel="保存修改" />
+                <div className="ai-config-commands">
+                  {!config.isDefault && config.enabled ? (
+                    <AIConfigCommandForm action={setDefaultGlobalAIConfigAction} configId={config.id} label="设为全局默认" pendingLabel="切换中…" />
+                  ) : null}
+                  <AIConfigCommandForm
+                    action={deleteGlobalAIConfigAction}
+                    configId={config.id}
+                    label="删除配置"
+                    pendingLabel="删除中…"
+                    danger
+                    confirmMessage={`确认删除“${config.name}”？使用它的用户将自动回退到全局默认。`}
+                  />
+                </div>
+              </div>
+            </details>
+          ))}
+          {configs.length === 0 ? <p className="empty-state">还没有全局 AI 配置。</p> : null}
+        </div>
+      </SectionCard>
+
+      <div style={{ height: 18 }} />
+
+      <SectionCard title="全局 AI 用量" description="展示主机级全局与服务器兜底请求，不包含用户私有 AI。">
         <div className="table-like admin-table">
           <div className="table-row header"><div>Task</div><div>Provider / model</div><div>Tokens / cost</div></div>
-          {dashboard.aiLogs.map((log) => (
+          {aiLogs.map((log) => (
             <div className="table-row" key={log.id}>
-              <div><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString()} / {log.source ?? "env"}</small></div>
+              <div><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString()} · {log.source ?? "env"}</small></div>
               <div>{log.provider}<br /><span className="pill">{log.model}</span></div>
               <div>in {log.inputTokenEstimate} / out {log.outputTokenEstimate}<br /><small>{log.costEstimateCents} cents est.</small></div>
             </div>
           ))}
-          {dashboard.aiLogs.length === 0 ? <p className="empty-state">还没有 AI 请求日志。</p> : null}
+          {aiLogs.length === 0 ? <p className="empty-state">还没有 AI 请求记录。</p> : null}
         </div>
       </SectionCard>
     </AdminShell>

@@ -145,7 +145,7 @@ export default async function DocumentsPage({
   }
 
   // ----- 列表状态：创建文档、浏览资料库、选择一份文档进入编辑。 -----
-  const evidence = await getEvidenceForWorkspace(session.workspace.id);
+  const evidence = await getEvidenceForWorkspace(session.workspace.id, session.user.id);
   const announcements = await getAnnouncements(session.workspace.id, true);
 
   return (

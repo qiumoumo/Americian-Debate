@@ -12,6 +12,8 @@ export interface ChatMessage {
 export interface ChatInput {
   messages: ChatMessage[];
   temperatureHint?: "focused" | "balanced" | "creative";
+  maxOutputTokens?: number;
+  timeoutMs?: number;
 }
 
 export interface ChatResult {
@@ -67,17 +69,57 @@ export interface AIUsageEstimate {
   costEstimateCents: number;
 }
 
-export type AIProviderErrorCode = "configuration" | "refusal" | "truncated" | "context" | "unexpected-stop" | "empty-response" | "parse" | "provider";
+export type AIProviderErrorCode = "configuration" | "authentication" | "model" | "timeout" | "network" | "refusal" | "truncated" | "context" | "unexpected-stop" | "empty-response" | "parse" | "provider";
 
 export class AIProviderError extends Error {
   code: AIProviderErrorCode;
   providerId?: AIProviderId;
+  status?: number;
+  systemCode?: string;
 
-  constructor(code: AIProviderErrorCode, message: string, options: { providerId?: AIProviderId; cause?: unknown } = {}) {
+  constructor(code: AIProviderErrorCode, message: string, options: { providerId?: AIProviderId; status?: number; systemCode?: string; cause?: unknown } = {}) {
     super(message, { cause: options.cause });
     this.name = "AIProviderError";
     this.code = code;
     this.providerId = options.providerId;
+    this.status = options.status;
+    this.systemCode = options.systemCode;
+  }
+}
+
+function errorSystemCode(error: unknown) {
+  const visited: unknown[] = [];
+  let current = error;
+  while (current && !visited.includes(current)) {
+    visited.push(current);
+    if (typeof current === "object" && "code" in current && typeof (current as { code?: unknown }).code === "string") {
+      return (current as { code: string }).code;
+    }
+    current = typeof current === "object" && "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return undefined;
+}
+
+async function providerRequest<T>(providerId: AIProviderId, request: () => Promise<T>) {
+  try {
+    return await request();
+  } catch (error) {
+    if (error instanceof AIProviderError) throw error;
+    const status = error && typeof error === "object" && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : undefined;
+    const message = error instanceof Error ? error.message : "AI provider request failed.";
+    const systemCode = errorSystemCode(error);
+    const code: AIProviderErrorCode = status === 401 || status === 403
+      ? "authentication"
+      : /model|模型/i.test(message)
+        ? "model"
+        : /timeout|timed out|aborted/i.test(`${error instanceof Error ? error.name : ""} ${message}`)
+          ? "timeout"
+          : status === undefined
+            ? "network"
+            : "provider";
+    throw new AIProviderError(code, message, { providerId, status, systemCode, cause: error });
   }
 }
 
@@ -256,6 +298,17 @@ function validateOpenAIConfig(options: { providerId: AIProviderId; apiKey: strin
   ]);
   if (missing.length) {
     throw new AIProviderError("configuration", `${options.providerId} provider is missing required configuration: ${missing.join(", ")}.`, { providerId: options.providerId });
+  }
+}
+
+function normalizeAnthropicBaseURL(baseURL: string | undefined) {
+  if (!baseURL) return undefined;
+  try {
+    const url = new URL(baseURL);
+    url.pathname = url.pathname.replace(/\/v1\/?$/i, "").replace(/\/+$/, "");
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return baseURL;
   }
 }
 
@@ -493,19 +546,25 @@ export class OpenAICompatibleProvider implements AIProvider {
   private client: OpenAI;
   private model: string;
 
-  constructor(options: { id?: AIProviderId; apiKey: string; baseURL: string; model: string }) {
+  constructor(options: { id?: AIProviderId; apiKey: string; baseURL: string; model: string; fetch?: typeof globalThis.fetch; maxRetries?: number }) {
     this.id = options.id ?? "openai-compatible";
     validateOpenAIConfig({ providerId: this.id, apiKey: options.apiKey, baseURL: options.baseURL, model: options.model });
-    this.client = new OpenAI({ apiKey: options.apiKey, baseURL: options.baseURL });
+    this.client = new OpenAI({
+      apiKey: options.apiKey,
+      baseURL: options.baseURL,
+      fetch: options.fetch,
+      maxRetries: options.maxRetries
+    });
     this.model = options.model;
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: toOpenAIMessages(input.messages)
-    });
-    const choice = response.choices[0];
+    const response = await providerRequest(this.id, () => this.client.chat.completions.create({
+        model: this.model,
+        messages: toOpenAIMessages(input.messages),
+        ...(input.maxOutputTokens ? { max_tokens: input.maxOutputTokens } : {})
+      }, input.timeoutMs ? { timeout: input.timeoutMs } : undefined));
+    const choice = response.choices?.[0];
     assertOpenAIChoice(choice, this.id);
 
     return {
@@ -553,21 +612,26 @@ export class AnthropicProvider implements AIProvider {
   private client: Anthropic;
   private model: string;
 
-  constructor(options: { apiKey?: string; model?: string } = {}) {
-    this.client = options.apiKey ? new Anthropic({ apiKey: options.apiKey }) : new Anthropic();
+  constructor(options: { apiKey?: string; model?: string; baseURL?: string; fetch?: typeof globalThis.fetch; maxRetries?: number } = {}) {
+    this.client = new Anthropic({
+      apiKey: options.apiKey,
+      baseURL: normalizeAnthropicBaseURL(options.baseURL),
+      fetch: options.fetch,
+      maxRetries: options.maxRetries
+    });
     this.model = options.model ?? DEFAULT_ANTHROPIC_MODEL;
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
     const { system, messages } = splitAnthropicMessages(input.messages);
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 16000,
-      system,
-      messages,
-      ...anthropicGenerationOptions(this.model)
-    });
+    const response = await providerRequest(this.id, () => this.client.messages.create({
+        model: this.model,
+        max_tokens: input.maxOutputTokens ?? 16000,
+        system,
+        messages,
+        ...anthropicGenerationOptions(this.model)
+      }, input.timeoutMs ? { timeout: input.timeoutMs } : undefined));
 
     return {
       providerId: this.id,
@@ -619,13 +683,17 @@ export function createAIProviderFromConfig(config: {
   apiKey?: string;
   baseURL?: string;
   model?: string;
+  fetch?: typeof globalThis.fetch;
+  maxRetries?: number;
 }): AIProvider {
   const preset = THIRD_PARTY_PROVIDERS[config.providerId];
   if (preset) {
     return new OpenAICompatibleProvider({
       apiKey: config.apiKey ?? "",
       baseURL: config.baseURL || preset.baseURL,
-      model: config.model || preset.defaultModel
+      model: config.model || preset.defaultModel,
+      fetch: config.fetch,
+      maxRetries: config.maxRetries
     });
   }
 
@@ -634,7 +702,9 @@ export function createAIProviderFromConfig(config: {
       id: "openclaw",
       apiKey: config.apiKey ?? "",
       baseURL: config.baseURL ?? "",
-      model: config.model ?? ""
+      model: config.model ?? "",
+      fetch: config.fetch,
+      maxRetries: config.maxRetries
     });
   }
 
@@ -642,14 +712,19 @@ export function createAIProviderFromConfig(config: {
     return new OpenAICompatibleProvider({
       apiKey: config.apiKey ?? "",
       baseURL: config.baseURL ?? "",
-      model: config.model ?? ""
+      model: config.model ?? "",
+      fetch: config.fetch,
+      maxRetries: config.maxRetries
     });
   }
 
   if (config.providerId === "anthropic") {
     return new AnthropicProvider({
       apiKey: config.apiKey,
-      model: config.model ?? DEFAULT_ANTHROPIC_MODEL
+      model: config.model ?? DEFAULT_ANTHROPIC_MODEL,
+      baseURL: config.baseURL,
+      fetch: config.fetch,
+      maxRetries: config.maxRetries
     });
   }
 

@@ -5,15 +5,16 @@ import { db } from "@debate/db";
 import type { EvidenceDraft, Side } from "@debate/shared";
 import { requireUser } from "@/lib/auth";
 import { sideToPrisma } from "@/lib/mappers";
+import { requireRoomAccess, touchRoomByMatchId } from "@/lib/rooms";
 
 // ── Evidence 导入 / 编辑 / 删除 / 关联比赛的 server actions ──────────
 // 全部经 requireUser() 校验 workspace 归属；返回值给 client（支持导入后撤回、
 // 加入/移出比赛）。Next 15 允许 server action 接收对象参数并返回结果。
 
 /** 校验目标文档属于当前 workspace，返回其 id。 */
-async function assertOwnedDocument(documentId: string, workspaceId: string) {
+async function assertOwnedDocument(documentId: string, userId: string, isSystemAdmin: boolean) {
   const document = await db.document.findFirst({
-    where: { id: documentId, workspaceId, deletedAt: null },
+    where: { id: documentId, deletedAt: null, ...(isSystemAdmin ? {} : { ownerId: userId }) },
     select: { id: true }
   });
   if (!document) {
@@ -44,7 +45,7 @@ export async function importEvidenceCards(input: {
   cards: EvidenceDraft[];
 }): Promise<ImportEvidenceResult> {
   const session = await requireUser();
-  const documentId = await assertOwnedDocument(input.documentId, session.workspace.id);
+  const documentId = await assertOwnedDocument(input.documentId, session.user.id, session.user.isSystemAdmin);
 
   const ids: string[] = [];
   for (const card of input.cards) {
@@ -86,7 +87,7 @@ export async function deleteEvidenceCards(input: { ids: string[] }): Promise<{ d
   const result = await db.evidence.deleteMany({
     where: {
       id: { in: input.ids },
-      document: { workspaceId: session.workspace.id, deletedAt: null }
+      document: { deletedAt: null, ...(session.user.isSystemAdmin ? {} : { ownerId: session.user.id }) }
     }
   });
   revalidatePath("/app/documents");
@@ -108,7 +109,7 @@ export async function updateEvidenceCard(input: {
 }): Promise<void> {
   const session = await requireUser();
   await db.evidence.updateMany({
-    where: { id: input.id, document: { workspaceId: session.workspace.id, deletedAt: null } },
+    where: { id: input.id, document: { deletedAt: null, ...(session.user.isSystemAdmin ? {} : { ownerId: session.user.id }) } },
     data: {
       title: input.title.trim(),
       claim: input.claim.trim(),
@@ -130,13 +131,14 @@ export async function addEvidenceToMatch(input: {
   matchId: string;
 }): Promise<{ linked: boolean }> {
   const session = await requireUser();
+  await requireRoomAccess(input.matchId, session.user.id, session.user.isSystemAdmin);
   const [match, evidence] = await Promise.all([
     db.match.findFirst({
-      where: { id: input.matchId, workspaceId: session.workspace.id, deletedAt: null },
+      where: { id: input.matchId, deletedAt: null },
       select: { id: true }
     }),
     db.evidence.findFirst({
-      where: { id: input.evidenceId, document: { workspaceId: session.workspace.id, deletedAt: null } },
+      where: { id: input.evidenceId, document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } },
       select: { id: true }
     })
   ]);
@@ -149,6 +151,7 @@ export async function addEvidenceToMatch(input: {
     create: { matchId: match.id, evidenceId: evidence.id },
     update: {}
   });
+  await touchRoomByMatchId(match.id);
 
   revalidatePath("/app/matches");
   return { linked: true };
@@ -160,13 +163,15 @@ export async function removeEvidenceFromMatch(input: {
   matchId: string;
 }): Promise<{ removed: number }> {
   const session = await requireUser();
+  await requireRoomAccess(input.matchId, session.user.id, session.user.isSystemAdmin);
   const result = await db.matchEvidence.deleteMany({
     where: {
       matchId: input.matchId,
       evidenceId: input.evidenceId,
-      match: { workspaceId: session.workspace.id, deletedAt: null }
+      match: { deletedAt: null }
     }
   });
+  await touchRoomByMatchId(input.matchId);
   revalidatePath("/app/matches");
   return { removed: result.count };
 }

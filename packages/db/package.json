@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./presence": "./src/presence.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "prisma:generate": "node src/prisma-cli.mjs generate",
     "prisma:push": "node src/prisma-cli.mjs db push --skip-generate",
+    "ai:backfill": "node --experimental-strip-types src/backfill-ai-configs.ts",
+    "rooms:backfill": "node --experimental-strip-types src/backfill-rooms.mjs",
     "prisma:seed": "node src/seed.mjs"
   },
   "dependencies": {

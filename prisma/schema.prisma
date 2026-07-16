@@ -53,12 +53,38 @@ enum FlowCellStatus {
   CONCEDED
 }
 
+enum RoomMemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum RoomInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum AIConfigScope {
+  GLOBAL
+  PERSONAL
+}
+
+enum AISelectionMode {
+  AUTO
+  CONFIG
+  ENV
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
   name         String
   passwordHash String?
+  mustChangePassword Boolean @default(false)
   disabledAt   DateTime?
+  isSystemAdmin Boolean      @default(false)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   memberships  Membership[]
@@ -66,9 +92,17 @@ model User {
   matches      Match[]
   sessions     Session[]
   aiConfig     UserAIConfig?
+  aiConfigs    AIConfig[]       @relation("AIConfigOwner")
+  updatedAIConfigs AIConfig[]   @relation("AIConfigUpdater")
+  aiSelection  UserAISelection?
   practiceSessions PracticeSession[]
   libraryRounds    LibraryRound[]    @relation("LibraryRoundCreator")
   roundVideoNotes  RoundVideoNote[]
+  ownedRooms       MatchRoom[]       @relation("RoomOwner")
+  roomMemberships  RoomMember[]
+  roomPresence     RoomPresence?
+  receivedRoomInvitations RoomInvitation[] @relation("RoomInvitationRecipient")
+  sentRoomInvitations     RoomInvitation[] @relation("RoomInvitationSender")
 }
 
 model Workspace {
@@ -98,11 +132,13 @@ model Session {
   kind        String    @default("user")
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([workspaceId])
+  @@index([kind, lastSeenAt])
 }
 
 model Membership {
@@ -165,6 +201,43 @@ model UserAIConfig {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Host-wide and private saved AI configurations. The legacy workspace/user
+// tables above remain available for an idempotent upgrade backfill.
+model AIConfig {
+  id              String        @id @default(cuid())
+  name            String
+  scope           AIConfigScope
+  ownerUserId     String?
+  providerId      String        @default("mock")
+  model           String        @default("")
+  baseUrl         String?
+  apiKeyEnc       String?
+  enabled         Boolean       @default(false)
+  isDefault       Boolean       @default(false)
+  updatedByUserId String?
+  legacyRef       String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  owner           User?         @relation("AIConfigOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  updatedBy       User?         @relation("AIConfigUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  selections      UserAISelection[]
+
+  @@index([scope, enabled, isDefault])
+  @@index([ownerUserId, updatedAt])
+}
+
+model UserAISelection {
+  userId    String          @id
+  mode      AISelectionMode @default(AUTO)
+  configId  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config    AIConfig?       @relation(fields: [configId], references: [id], onDelete: SetNull)
+
+  @@index([configId])
 }
 
 model Announcement {
@@ -287,9 +360,72 @@ model Match {
   argumentOutcomes ArgumentOutcome[]
   reflection       Reflection?
   flowRows         FlowRow[]
+  room             MatchRoom?
 
   @@index([workspaceId, deletedAt])
   @@index([userId])
+}
+
+model MatchRoom {
+  id                 String   @id @default(cuid())
+  matchId            String   @unique
+  inviteCode         String   @unique
+  ownerId            String
+  revision           Int      @default(0)
+  timerStateJson     Json
+  timerStartedAt     DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  owner              User     @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members            RoomMember[]
+  presences          RoomPresence[]
+  invitations        RoomInvitation[]
+
+  @@index([ownerId])
+}
+
+model RoomMember {
+  id        String           @id @default(cuid())
+  roomId    String
+  userId    String
+  status    RoomMemberStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  room      MatchRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId, status])
+}
+
+model RoomPresence {
+  id              String    @id @default(cuid())
+  roomId          String
+  userId          String    @unique
+  connectionToken String    @unique
+  lastSeenAt      DateTime  @default(now())
+  room            MatchRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, lastSeenAt])
+}
+
+model RoomInvitation {
+  id          String               @id @default(cuid())
+  roomId      String
+  recipientId String
+  invitedById String
+  status      RoomInvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime             @default(now())
+  respondedAt DateTime?
+  room        MatchRoom            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  recipient   User                 @relation("RoomInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  invitedBy   User                 @relation("RoomInvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, status, expiresAt])
+  @@index([roomId, status])
 }
 
 model MatchDocument {

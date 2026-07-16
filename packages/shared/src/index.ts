@@ -17,7 +17,13 @@ export interface Evidence {
   publishedDate?: string;
   side: Side;
   tags: string[];
+  uploaderId?: string;
+  uploaderName?: string;
+  uploaderWorkspaceName?: string;
+  isMine?: boolean;
 }
+
+export * from "./room.ts";
 
 export interface DebateDocument {
   id: string;

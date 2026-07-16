@@ -58,6 +58,8 @@ corepack pnpm install
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
 corepack pnpm --filter @debate/db prisma:seed
+corepack pnpm --filter @debate/db ai:backfill
+corepack pnpm --filter @debate/db rooms:backfill
 corepack pnpm dev
 ```
 
@@ -92,7 +94,53 @@ AI keys are server-only. Copy `.env.example` to `.env.local` and never create `N
 ```env
 AI_PROVIDER=mock
 DATABASE_URL=file:./dev-mvp.db
+APP_ENCRYPTION_KEY=replace-with-a-long-random-secret
 ```
+
+Saved AI keys use `APP_ENCRYPTION_KEY` when it is at least 16 characters long. If it is omitted, the server derives the encryption key from a sufficiently long `SESSION_SECRET`; a dedicated key is recommended for production. Keep the selected secret stable or previously saved API keys cannot be decrypted.
+
+System administrators can save multiple host-wide AI configurations from `/admin/ai`. Users can select any enabled global configuration or manage multiple private configurations from `/app/settings`; private keys and endpoints are never exposed to administrators or other users.
+
+Both configuration screens include a static, non-secret example and two independent server-side checks:
+
+- `Get models` is locked by default. A deployment with working DNS and HTTPS outbound access can set `AI_MODEL_DISCOVERY_ENABLED=true`; the app then requests `GET /models`, also checks `/v1/models` for a bare compatible host, and offers returned model IDs for selection.
+- `Test connection` sends a minimal real request to the configured model through its chat endpoint. This validates the URL, key, model, and runtime-compatible response, and may incur a very small provider charge.
+
+Model discovery and connection testing are optional. Neither one is required to save, enable, select, or use a manually entered configuration. If model discovery remains locked, clicking its control explains that server internet access and a technical administrator are required to enable it.
+
+Example values shown by the UI use `https://api.example.com/v1`, `sk-example-not-a-real-key`, and `example-chat-model`; they never include saved configuration values.
+
+Endpoint inspection blocks localhost, private-network, link-local, and cloud-metadata addresses by default. A trusted local deployment that intentionally uses a LAN or localhost AI server can set `AI_ALLOW_PRIVATE_ENDPOINTS=true`; leave it disabled for internet-facing installations.
+
+If the server cannot open outbound HTTPS directly, set `HTTPS_PROXY` and keep `NO_PROXY=localhost,127.0.0.1` in `.env.local`, then restart the app. On Node.js 22.21 or newer the AI provider enables the runtime proxy after Next.js loads the environment file, so both connection tests and normal AI requests use the same route. An `EACCES`/`EPERM` connection error means the Node.js process itself is blocked from outbound network access; allow outbound TCP 443 in the host firewall or sandbox, or provide a reachable HTTPS proxy.
+
+### Windows: allow Node.js outbound HTTPS
+
+Run PowerShell as Administrator. Set `AI_HOST` to the hostname from the configured Base URL, then create a narrowly scoped outbound rule for the current Node.js executable, resolved server IP, and TCP port 443:
+
+```powershell
+$AI_HOST = "qzq.zerohillqq.top"
+$NODE_PATH = (Get-Command node -ErrorAction Stop).Source
+$AI_IP = (Resolve-DnsName $AI_HOST -Type A -ErrorAction Stop |
+  Where-Object IPAddress |
+  Select-Object -First 1 -ExpandProperty IPAddress)
+
+New-NetFirewallRule `
+  -DisplayName "Debate AI HTTPS" `
+  -Direction Outbound `
+  -Action Allow `
+  -Protocol TCP `
+  -Program $NODE_PATH `
+  -RemoteAddress $AI_IP `
+  -RemotePort 443 `
+  -Profile Any
+
+Test-NetConnection $AI_HOST -Port 443
+```
+
+`TcpTestSucceeded` must be `True`. Restart the app after changing the firewall or proxy configuration. If the rule already exists, inspect it with `Get-NetFirewallRule -DisplayName "Debate AI HTTPS"`; remove and recreate only that named rule when the provider IP or Node.js installation path changes. A host sandbox or corporate network policy can still override Windows Firewall rules, in which case run the app outside that sandbox or use the approved `HTTPS_PROXY` route.
+
+Never commit `.env.local`, `api.txt`, SQLite database files, API keys, session secrets, or proxy credentials. The repository `.gitignore` excludes these local files; verify staged files with `git status` before every push.
 
 Supported providers:
 
@@ -140,7 +188,12 @@ When changing Prisma models, run:
 ```bash
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
+corepack pnpm --filter @debate/db ai:backfill
+corepack pnpm --filter @debate/db rooms:backfill
 ```
+
+LAN HTTP is the default. Set `COOKIE_SECURE=true` only when the host is served through HTTPS.
+The room backfill also normalizes legacy session heartbeat timestamps; users become online again after their next app heartbeat.
 
 ## Safety Notes
 

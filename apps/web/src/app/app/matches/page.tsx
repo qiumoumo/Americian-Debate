@@ -5,19 +5,21 @@ import { AIDraftPanel } from "@/components/ai-draft-panel";
 import { EvidenceLibraryPanel } from "@/components/evidence-library-panel";
 import { FlowSheet } from "@/components/flow-sheet";
 import { SectionCard } from "@/components/section-card";
-import { SpeechTimer } from "@/components/speech-timer";
-import { createMatch, saveSpeechNote } from "./actions";
+import { MatchRoomRealtime } from "@/components/match-room-realtime";
+import { SharedSpeechNotes } from "@/components/shared-speech-notes";
+import { createMatch, joinMatchRoom } from "./actions";
+import { changeMatchRoomMember, rotateMatchRoomCode, transferMatchRoomOwner } from "./room-actions";
 import { createFlowRow } from "./flow-actions";
 import {
   getEvidenceForWorkspace,
   getFlowForMatch,
   getMatchById,
-  getMatchEvidenceIds,
-  getMatchesForWorkspace
+  getMatchEvidenceIds
 } from "@/lib/data";
 import { requireUser } from "@/lib/auth";
 import { mapPrismaSide, mapPrismaFormat } from "@/lib/mappers";
 import { sessionShellUser } from "@/lib/session-props";
+import { getRoomDetails, listRoomsForUser } from "@/lib/rooms";
 
 export default async function MatchesPage({
   searchParams
@@ -29,17 +31,19 @@ export default async function MatchesPage({
 
   // 只有传入了有效且属于本 workspace 的比赛 id 时，才进入聚焦比赛室。
   const selectedMatch = requestedId
-    ? await getMatchById(requestedId.trim(), session.workspace.id)
+    ? await getMatchById(requestedId.trim(), session.user.id)
     : null;
 
   // ----- 比赛室状态：只显示这一场比赛的计时器 / 笔记 / AI / Flow。 -----
   if (selectedMatch) {
-    const [evidence, flow, linkedEvidenceIds] = await Promise.all([
-      getEvidenceForWorkspace(session.workspace.id),
-      getFlowForMatch(selectedMatch.id, session.workspace.id),
-      getMatchEvidenceIds(selectedMatch.id, session.workspace.id)
+    const [evidence, flow, linkedEvidenceIds, room] = await Promise.all([
+      getEvidenceForWorkspace(session.workspace.id, session.user.id),
+      getFlowForMatch(selectedMatch.id, session.user.id),
+      getMatchEvidenceIds(selectedMatch.id, session.user.id),
+      getRoomDetails(selectedMatch.id, session.user.id, session.user.isSystemAdmin)
     ]);
     const side = mapPrismaSide(selectedMatch.side);
+    const onlineMemberIds = new Set(room.presences.map((presence) => presence.userId));
 
     return (
       <AppShell
@@ -57,25 +61,51 @@ export default async function MatchesPage({
           <p>{selectedMatch.topic}</p>
         </section>
 
-        <SectionCard title="Round timer" description="计时器支持赛制 speech preset、start/pause、prep 和 reset。">
-          <SpeechTimer format={mapPrismaFormat(selectedMatch.format)} />
+        <SectionCard title="比赛房间" description="成员、比赛内容与计时器在局域网内准实时同步。">
+          <MatchRoomRealtime matchId={selectedMatch.id} initialRevision={room.revision} />
+          {room.ownerId === session.user.id || session.user.isSystemAdmin ? (
+            <div className="room-management">
+              <div className="actions">
+                <span className="pill">房主：{room.owner.name}</span>
+                <form action={rotateMatchRoomCode}>
+                  <input type="hidden" name="matchId" value={selectedMatch.id} />
+                  <button className="button" type="submit">更换邀请码</button>
+                </form>
+              </div>
+              <div className="table-like">
+                {room.members.map((member) => (
+                  <div className="table-row" key={member.id}>
+                    <div><strong>{member.user.name}</strong><br /><small>{member.user.email}</small></div>
+                    <div><span className="pill">{member.status === "ACTIVE" ? "可访问" : "已移出"}</span></div>
+                    <div className="actions">
+                      {member.userId !== room.ownerId ? (
+                        <form action={changeMatchRoomMember}>
+                          <input type="hidden" name="matchId" value={selectedMatch.id} />
+                          <input type="hidden" name="userId" value={member.userId} />
+                          <input type="hidden" name="status" value={member.status === "ACTIVE" ? "REMOVED" : "ACTIVE"} />
+                          <button className="button" type="submit">{member.status === "ACTIVE" ? "移出" : "恢复"}</button>
+                        </form>
+                      ) : null}
+                      {member.status === "ACTIVE" && member.userId !== room.ownerId && onlineMemberIds.has(member.userId) ? (
+                        <form action={transferMatchRoomOwner}>
+                          <input type="hidden" name="matchId" value={selectedMatch.id} />
+                          <input type="hidden" name="userId" value={member.userId} />
+                          <button className="button" type="submit">转让房主</button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </SectionCard>
 
         <div style={{ height: 18 }} />
 
         <div className="grid two">
           <SectionCard title="比赛笔记" description={`${selectedMatch.tournament} vs ${selectedMatch.opponent}`}>
-            <div className="table-like note-table">
-              <div className="table-row header"><div>Speech</div><div>Notes</div><div>Action</div></div>
-              {selectedMatch.speechNotes.map((note) => (
-                <form className="table-row" action={saveSpeechNote} key={note.id}>
-                  <input type="hidden" name="speechNoteId" value={note.id} />
-                  <div><strong>{note.speechType}</strong><br /><span className="pill">{Math.round(note.timerDurationMs / 60000)} min</span></div>
-                  <div><textarea name="notes" defaultValue={note.notes} rows={4} /></div>
-                  <div><button className="button" type="submit">保存</button></div>
-                </form>
-              ))}
-            </div>
+            <SharedSpeechNotes notes={selectedMatch.speechNotes} />
             {selectedMatch.notes.length ? (
               <div className="timeline spaced">
                 {selectedMatch.notes.map((note) => (
@@ -124,7 +154,7 @@ export default async function MatchesPage({
   }
 
   // ----- 列表状态：创建比赛，或选择一场已有比赛进入比赛室。 -----
-  const matches = await getMatchesForWorkspace(session.workspace.id);
+  const rooms = await listRoomsForUser(session.user.id);
 
   return (
     <AppShell
@@ -171,23 +201,32 @@ export default async function MatchesPage({
 
       <div style={{ height: 18 }} />
 
+      <SectionCard title="加入比赛房间" description="输入房主分享的 6 位局域网邀请码。">
+        <form action={joinMatchRoom} className="actions">
+          <label className="field"><span>邀请码</span><input name="inviteCode" minLength={6} maxLength={6} required placeholder="ABC234" /></label>
+          <button className="button primary" type="submit">加入房间</button>
+        </form>
+      </SectionCard>
+
+      <div style={{ height: 18 }} />
+
       <SectionCard title="比赛列表" description="点「进入比赛室」继续记录笔记、AI 草稿和 Live Flow。">
         <div className="timeline spaced">
-          {matches.map((match) => (
-            <article className="timeline-item" key={match.id}>
+          {rooms.map((room) => (
+            <article className="timeline-item" key={room.id}>
               <div className="actions">
-                <strong>{match.tournament} vs {match.opponent}</strong>
-                <span className="pill">{match.format}</span>
-                <span className="pill">{match.side}</span>
+                <strong>{room.match.tournament} vs {room.match.opponent}</strong>
+                <span className="pill">{mapPrismaFormat(room.match.format)}</span>
+                <span className="pill">房主：{room.owner.name}</span>
               </div>
-              <p>{match.topic}</p>
+              <p>{room.match.topic}</p>
               <div className="actions">
-                <Link className="button primary" href={`/app/matches?match=${match.id}`}>进入比赛室 →</Link>
-                <span className="pill">{match.result}</span>
+                <Link className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</Link>
+                <span className="pill">邀请码 {room.inviteCode}</span>
               </div>
             </article>
           ))}
-          {matches.length === 0 ? <p className="empty-state">还没有比赛。先创建一场比赛。</p> : null}
+          {rooms.length === 0 ? <p className="empty-state">还没有可访问的比赛房间。</p> : null}
         </div>
       </SectionCard>
     </AppShell>
