@@ -1,6 +1,7 @@
 import { db } from "@debate/db";
 import type { FlowColumn, PracticeSessionSummary } from "@debate/shared";
-import { mapDocument, mapEvidence, mapFlowRow, mapLibraryRound, mapMatch, mapPrismaFormat, mapPrismaSide, readStringArray } from "./mappers.ts";
+import { mapDocument, mapEvidence, mapFlowRow, mapLibraryRound, mapPrismaFormat, mapPrismaSide, readStringArray } from "./mappers.ts";
+import { getMatchHistory } from "./match-reports.ts";
 
 export async function getDocumentsForWorkspace(workspaceId: string) {
   const documents = await db.document.findMany({
@@ -65,19 +66,6 @@ export async function getLibraryRoundById(roundId: string, workspaceId: string, 
     }
   });
   return round ? mapLibraryRound(round) : null;
-}
-
-export async function getMatchesForWorkspace(workspaceId: string) {
-  const matches = await db.match.findMany({
-    where: { workspaceId, deletedAt: null },
-    include: {
-      reflection: true,
-      argumentOutcomes: { orderBy: { createdAt: "desc" } }
-    },
-    orderBy: { updatedAt: "desc" }
-  });
-
-  return matches.map(mapMatch);
 }
 
 export async function getLatestMatchWorkspace(workspaceId: string) {
@@ -239,21 +227,6 @@ export function readDrills(value: unknown): StoredPracticeDrill[] {
   });
 }
 
-export function computeMatchStats(matches: Awaited<ReturnType<typeof getMatchesForWorkspace>>) {
-  const decided = matches.filter((match) => match.result !== "pending");
-  const wins = decided.filter((match) => match.result === "win").length;
-  const affPro = decided.filter((match) => match.side === "Aff" || match.side === "Pro");
-  const negCon = decided.filter((match) => match.side === "Neg" || match.side === "Con");
-
-  return {
-    rounds: matches.length,
-    winRate: decided.length ? Math.round((wins / decided.length) * 100) : 0,
-    affWinRate: affPro.length ? Math.round((affPro.filter((match) => match.result === "win").length / affPro.length) * 100) : 0,
-    negWinRate: negCon.length ? Math.round((negCon.filter((match) => match.result === "win").length / negCon.length) * 100) : 0,
-    argumentOutcomeCount: matches.reduce((sum, match) => sum + match.argumentOutcomes.length, 0)
-  };
-}
-
 export async function getWorkspaceMembers(workspaceId: string) {
   return db.membership.findMany({
     where: { workspaceId },
@@ -323,9 +296,9 @@ export async function getAdminWorkspaces(userId: string) {
   }));
 }
 
-export async function getAnalyticsDashboard(workspaceId: string, memberUserIds: string[]) {
-  const matches = await getMatchesForWorkspace(workspaceId);
-  const stats = computeMatchStats(matches);
+export async function getAnalyticsDashboard(workspaceId: string, memberUserIds: string[], actorUserId: string) {
+  const matchHistory = await getMatchHistory({ userId: actorUserId, workspaceId });
+  const stats = matchHistory.stats;
 
   // AI usage aggregated by taskType (workspace/env only — personal excluded).
   const aiLogs = await db.aIRequestLog.findMany({
@@ -353,7 +326,8 @@ export async function getAnalyticsDashboard(workspaceId: string, memberUserIds: 
 
   return {
     stats,
-    matchCount: matches.length,
+    matchCount: stats.rounds,
+    pendingMatchCount: matchHistory.pending.length,
     aiUsage: Array.from(usageByTask.entries()).map(([taskType, value]) => ({ taskType, ...value })),
     totalAiRequests: aiLogs.length,
     totalAiCents: aiLogs.reduce((sum, log) => sum + log.costEstimateCents, 0),

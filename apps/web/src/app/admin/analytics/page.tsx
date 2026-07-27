@@ -24,7 +24,7 @@ export default async function AdminAnalyticsPage() {
   const session = await requireAdmin();
   const members = await getWorkspaceMembers(session.workspace.id);
   const memberUserIds = members.map((m) => m.userId);
-  const data = await getAnalyticsDashboard(session.workspace.id, memberUserIds);
+  const data = await getAnalyticsDashboard(session.workspace.id, memberUserIds, session.user.id);
 
   const maxTaskCount = Math.max(1, ...data.aiUsage.map((u) => u.count));
 
@@ -37,8 +37,8 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <div className="grid three">
-        <StatCard label="比赛场次" value={String(data.matchCount)} note="workspace 总记录" />
-        <StatCard label="总胜率" value={`${data.stats.winRate}%`} note={`${data.stats.rounds} 场中已判定`} />
+        <StatCard label="已提交比赛" value={String(data.matchCount)} note={`${data.pendingMatchCount} 场待复盘`} />
+        <StatCard label="总胜率" value={`${data.stats.winRate}%`} note={`已判定 ${data.stats.decidedRounds} / ${data.stats.rounds} 场`} />
         <StatCard label="训练次数" value={String(data.practiceTotal)} note="Practice sessions" />
       </div>
 

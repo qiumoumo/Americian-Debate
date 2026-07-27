@@ -24,7 +24,7 @@ export default async function AdminDataPage({
       <section className="hero">
         <div className="eyebrow">Data</div>
         <h1>数据备份 / 导入导出</h1>
-        <p>导出当前工作区的结构化数据为 JSON，或从 JSON 导入。当前工作区：{session.workspace.name}。</p>
+        <p>导出当前工作区的结构化数据为 JSON；导入当前仅恢复文档与公告。当前工作区：{session.workspace.name}。</p>
       </section>
 
       {errorMessage ? <p className="empty-state">{errorMessage}</p> : null}
@@ -37,7 +37,7 @@ export default async function AdminDataPage({
           </a>
         </SectionCard>
 
-        <SectionCard title="导入" description={canImport ? "把导出的 JSON 粘贴到下方，将以新增方式写入当前工作区。" : "仅 OWNER 可导入。"}>
+        <SectionCard title="导入" description={canImport ? "把导出的 JSON 粘贴到下方，将以新增方式恢复文档与公告；比赛记录请使用 SQLite 完整备份恢复。" : "仅 OWNER 可导入。"}>
           {canImport ? (
             <form action="/admin/data/import" method="post" className="stack">
               <label className="field">

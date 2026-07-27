@@ -59,6 +59,7 @@ corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
 corepack pnpm --filter @debate/db prisma:seed
 corepack pnpm --filter @debate/db ai:backfill
+corepack pnpm --filter @debate/db reports:backfill
 corepack pnpm --filter @debate/db rooms:backfill
 corepack pnpm dev
 ```
@@ -189,6 +190,7 @@ When changing Prisma models, run:
 corepack pnpm --filter @debate/db prisma:generate
 corepack pnpm --filter @debate/db prisma:push
 corepack pnpm --filter @debate/db ai:backfill
+corepack pnpm --filter @debate/db reports:backfill
 corepack pnpm --filter @debate/db rooms:backfill
 ```
 

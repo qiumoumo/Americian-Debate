@@ -132,28 +132,34 @@ export async function addEvidenceToMatch(input: {
 }): Promise<{ linked: boolean }> {
   const session = await requireUser();
   await requireRoomAccess(input.matchId, session.user.id, session.user.isSystemAdmin);
-  const [match, evidence] = await Promise.all([
-    db.match.findFirst({
-      where: { id: input.matchId, deletedAt: null },
-      select: { id: true }
-    }),
-    db.evidence.findFirst({
-      where: { id: input.evidenceId, document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } },
-      select: { id: true }
-    })
-  ]);
-  if (!match || !evidence) {
-    throw new Error("Match or evidence not found");
-  }
+  await db.$transaction(async (tx) => {
+    const [match, evidence] = await Promise.all([
+      tx.match.findFirst({
+        where: { id: input.matchId, deletedAt: null },
+        select: { id: true, reportSubmittedAt: true }
+      }),
+      tx.evidence.findFirst({
+        where: { id: input.evidenceId, document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } },
+        select: { id: true }
+      })
+    ]);
+    if (!match || !evidence) {
+      throw new Error("Match or evidence not found");
+    }
+    if (match.reportSubmittedAt) {
+      throw new Error("Submitted report evidence must be revised from match history");
+    }
 
-  await db.matchEvidence.upsert({
-    where: { matchId_evidenceId: { matchId: match.id, evidenceId: evidence.id } },
-    create: { matchId: match.id, evidenceId: evidence.id },
-    update: {}
+    await tx.matchEvidence.upsert({
+      where: { matchId_evidenceId: { matchId: match.id, evidenceId: evidence.id } },
+      create: { matchId: match.id, evidenceId: evidence.id },
+      update: {}
+    });
   });
-  await touchRoomByMatchId(match.id);
+  await touchRoomByMatchId(input.matchId);
 
   revalidatePath("/app/matches");
+  revalidatePath("/app/history");
   return { linked: true };
 }
 
@@ -164,14 +170,24 @@ export async function removeEvidenceFromMatch(input: {
 }): Promise<{ removed: number }> {
   const session = await requireUser();
   await requireRoomAccess(input.matchId, session.user.id, session.user.isSystemAdmin);
-  const result = await db.matchEvidence.deleteMany({
-    where: {
-      matchId: input.matchId,
-      evidenceId: input.evidenceId,
-      match: { deletedAt: null }
+  const removed = await db.$transaction(async (tx) => {
+    const match = await tx.match.findFirst({
+      where: { id: input.matchId, deletedAt: null },
+      select: { reportSubmittedAt: true }
+    });
+    if (!match) {
+      throw new Error("Match not found");
     }
+    if (match.reportSubmittedAt) {
+      throw new Error("Submitted report evidence must be revised from match history");
+    }
+    const result = await tx.matchEvidence.deleteMany({
+      where: { matchId: input.matchId, evidenceId: input.evidenceId }
+    });
+    return result.count;
   });
   await touchRoomByMatchId(input.matchId);
   revalidatePath("/app/matches");
-  return { removed: result.count };
+  revalidatePath("/app/history");
+  return { removed };
 }
