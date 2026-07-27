@@ -22,7 +22,7 @@ export interface MatchReportActor {
 
 export type MatchReportErrorCode = "NOT_FOUND" | "FORBIDDEN" | "VALIDATION_FAILED" | "REVISION_CONFLICT";
 
-export class MatchReportError extends Error {
+class MatchReportError extends Error {
   readonly code: MatchReportErrorCode;
   readonly issues: Record<string, string>;
 

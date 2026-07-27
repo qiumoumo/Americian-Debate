@@ -22,6 +22,13 @@ if (pushed.status !== 0) throw new Error(pushed.stderr || pushed.stdout);
 const { db } = await import("@debate/db");
 const reports = await import("./match-reports.ts");
 
+function reportErrorIssues(error: unknown, code: string) {
+  assert.ok(error instanceof Error && "code" in error && "issues" in error);
+  assert.equal(error.code, code);
+  assert.ok(error.issues && typeof error.issues === "object" && !Array.isArray(error.issues));
+  return error.issues as Record<string, string>;
+}
+
 async function createActorFixture(label: string, role: "OWNER" | "COACH" | "DEBATER" | "VIEWER" = "DEBATER") {
   const user = await db.user.create({ data: { email: `${label}@test.local`, name: label } });
   const workspace = await db.workspace.create({ data: { name: `${label} workspace` } });
@@ -61,6 +68,10 @@ after(async () => {
 });
 
 describe("match report public seam", () => {
+  it("exposes only the three public operations at runtime", () => {
+    assert.deepEqual(Object.keys(reports).sort(), ["getMatchHistory", "getMatchReport", "saveMatchReport"]);
+  });
+
   it("creates a pending historical report without a match room and makes it retrievable", async () => {
     const fixture = await createActorFixture("historical-owner");
 
@@ -227,7 +238,10 @@ describe("match report public seam", () => {
         target: { kind: "existing", matchId: initial.matchId, expectedRevision: 1 },
         report: validReport({ tournament: "Stale overwrite" })
       }),
-      (error: unknown) => error instanceof reports.MatchReportError && error.code === "REVISION_CONFLICT"
+      (error: unknown) => {
+        reportErrorIssues(error, "REVISION_CONFLICT");
+        return true;
+      }
     );
     const auditLogs = await db.auditLog.findMany({
       where: { targetType: "Match", targetId: initial.matchId },
@@ -282,12 +296,11 @@ describe("match report public seam", () => {
         })
       }),
       (error: unknown) => {
-        assert.ok(error instanceof reports.MatchReportError);
-        assert.equal(error.code, "VALIDATION_FAILED");
-        assert.equal(error.issues.tournament, "Tournament is required");
-        assert.equal(error.issues.date, "Date must be valid");
-        assert.equal(error.issues["argumentOutcomes.0.confidence"], "Confidence must be between 1 and 5");
-        assert.equal(error.issues["evidence.0.evidenceId"], "Evidence is not visible");
+        const issues = reportErrorIssues(error, "VALIDATION_FAILED");
+        assert.equal(issues.tournament, "Tournament is required");
+        assert.equal(issues.date, "Date must be valid");
+        assert.equal(issues["argumentOutcomes.0.confidence"], "Confidence must be between 1 and 5");
+        assert.equal(issues["evidence.0.evidenceId"], "Evidence is not visible");
         return true;
       }
     );
@@ -369,6 +382,49 @@ describe("match report public seam", () => {
     assert.equal(filtered.stats.winRate, 100);
   });
 
+  it("orders same-date reports by creation time and then by id", async () => {
+    const fixture = await createActorFixture("stable-order-owner");
+    const matchDate = new Date("2026-07-22T00:00:00.000Z");
+    const submittedAt = new Date("2026-07-23T00:00:00.000Z");
+    const ids = {
+      old: `stable-${process.pid}-old`,
+      tieA: `stable-${process.pid}-tie-a`,
+      tieZ: `stable-${process.pid}-tie-z`,
+      newest: `stable-${process.pid}-newest`
+    };
+    await db.match.createMany({
+      data: [
+        {
+          id: ids.old, workspaceId: fixture.workspace.id, userId: fixture.user.id,
+          tournament: "Old", opponent: "Opponent", topic: "Topic", tagsJson: [],
+          date: matchDate, createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          reportSubmittedAt: submittedAt, reportRevision: 1
+        },
+        {
+          id: ids.tieZ, workspaceId: fixture.workspace.id, userId: fixture.user.id,
+          tournament: "Tie Z", opponent: "Opponent", topic: "Topic", tagsJson: [],
+          date: matchDate, createdAt: new Date("2026-01-02T00:00:00.000Z"),
+          reportSubmittedAt: submittedAt, reportRevision: 1
+        },
+        {
+          id: ids.newest, workspaceId: fixture.workspace.id, userId: fixture.user.id,
+          tournament: "Newest", opponent: "Opponent", topic: "Topic", tagsJson: [],
+          date: matchDate, createdAt: new Date("2026-01-03T00:00:00.000Z"),
+          reportSubmittedAt: submittedAt, reportRevision: 1
+        },
+        {
+          id: ids.tieA, workspaceId: fixture.workspace.id, userId: fixture.user.id,
+          tournament: "Tie A", opponent: "Opponent", topic: "Topic", tagsJson: [],
+          date: matchDate, createdAt: new Date("2026-01-02T00:00:00.000Z"),
+          reportSubmittedAt: submittedAt, reportRevision: 1
+        }
+      ]
+    });
+
+    const history = await reports.getMatchHistory(fixture.actor, {});
+    assert.deepEqual(history.reports.map((item) => item.id), [ids.newest, ids.tieA, ids.tieZ, ids.old]);
+  });
+
   it("returns visible evidence options with the saved selection state", async () => {
     const fixture = await createActorFixture("evidence-options-owner");
     const document = await db.document.create({
@@ -414,9 +470,8 @@ describe("match report public seam", () => {
         report: validReport({ evidence: [{ evidenceId: evidence.id, effectivenessRating: null, notes: "" }] })
       }),
       (error: unknown) => {
-        assert.ok(error instanceof reports.MatchReportError);
-        assert.equal(error.code, "VALIDATION_FAILED");
-        assert.equal(error.issues["evidence.0.effectivenessRating"], "Effectiveness must be between 1 and 5");
+        const issues = reportErrorIssues(error, "VALIDATION_FAILED");
+        assert.equal(issues["evidence.0.effectivenessRating"], "Effectiveness must be between 1 and 5");
         return true;
       }
     );
@@ -477,8 +532,23 @@ describe("match report public seam", () => {
         target: { kind: "existing", matchId: match.id, expectedRevision: 3 },
         report: validReport({ tournament: "Viewer overwrite", opponent: "Opponent", topic: "Permission topic" })
       }),
-      (error: unknown) => error instanceof reports.MatchReportError && error.code === "FORBIDDEN"
+      (error: unknown) => {
+        reportErrorIssues(error, "FORBIDDEN");
+        return true;
+      }
     );
+
+    const member = await addWorkspaceActor(fixture.workspace.id, "permission-member", "DEBATER");
+    const memberReport = await reports.saveMatchReport(member.actor, {
+      target: { kind: "historical" },
+      report: validReport({ tournament: "Member-owned report" })
+    });
+    assert.equal((await reports.getMatchReport(fixture.actor, memberReport.matchId)).canEdit, true);
+    const ownerRevision = await reports.saveMatchReport(fixture.actor, {
+      target: { kind: "existing", matchId: memberReport.matchId, expectedRevision: 1 },
+      report: validReport({ tournament: "Owner override revision" })
+    });
+    assert.equal(ownerRevision.reportRevision, 2);
 
     await db.roomMember.update({
       where: { roomId_userId: { roomId: room.id, userId: guestFixture.user.id } },
@@ -486,7 +556,10 @@ describe("match report public seam", () => {
     });
     await assert.rejects(
       reports.getMatchReport(guestFixture.actor, match.id),
-      (error: unknown) => error instanceof reports.MatchReportError && error.code === "FORBIDDEN"
+      (error: unknown) => {
+        reportErrorIssues(error, "FORBIDDEN");
+        return true;
+      }
     );
   });
 
@@ -515,7 +588,10 @@ describe("match report public seam", () => {
             ]
           })
         }),
-        (error: unknown) => error instanceof reports.MatchReportError && error.code === "VALIDATION_FAILED"
+        (error: unknown) => {
+          reportErrorIssues(error, "VALIDATION_FAILED");
+          return true;
+        }
       );
     } finally {
       await db.$executeRawUnsafe('DROP TRIGGER IF EXISTS "match_report_force_outcome_failure"');
@@ -537,7 +613,10 @@ describe("match report public seam", () => {
 
     await assert.rejects(
       reports.getMatchReport(fixture.actor, saved.matchId),
-      (error: unknown) => error instanceof reports.MatchReportError && error.code === "NOT_FOUND"
+      (error: unknown) => {
+        reportErrorIssues(error, "NOT_FOUND");
+        return true;
+      }
     );
     assert.equal((await reports.getMatchHistory(fixture.actor, {})).reports.some((item) => item.id === saved.matchId), false);
   });
