@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./match-report-backfill": "./src/match-report-backfill.ts",
     "./presence": "./src/presence.ts"
   },
   "scripts": {
@@ -12,6 +13,7 @@
     "prisma:generate": "node src/prisma-cli.mjs generate",
     "prisma:push": "node src/prisma-cli.mjs db push --skip-generate",
     "ai:backfill": "node --experimental-strip-types src/backfill-ai-configs.ts",
+    "reports:backfill": "node --experimental-strip-types src/backfill-match-reports.ts",
     "rooms:backfill": "node --experimental-strip-types src/backfill-rooms.mjs",
     "prisma:seed": "node src/seed.mjs"
   },

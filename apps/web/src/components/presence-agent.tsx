@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface PendingInvitation {
   id: string;
@@ -11,7 +10,6 @@ interface PendingInvitation {
 }
 
 export function PresenceAgent() {
-  const router = useRouter();
   const [invitation, setInvitation] = useState<PendingInvitation | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +42,7 @@ export function PresenceAgent() {
       const payload = await response.json() as { matchId?: string; error?: string };
       if (!response.ok) throw new Error(payload.error || "邀请处理失败");
       setInvitation(null);
-      if (accept && payload.matchId) router.push(`/app/matches?match=${payload.matchId}`);
+      if (accept && payload.matchId) window.location.assign(`/app/matches?match=${payload.matchId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "邀请处理失败，请重试。");
     } finally {

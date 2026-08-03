@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { userNavigation } from "@/lib/navigation";
+import { ReliableLink } from "@/components/reliable-link";
 
 interface ClientShellProps {
   activeHref?: string;
@@ -16,12 +16,12 @@ export function ClientShell({ activeHref, children, user }: ClientShellProps) {
   return (
     <div className="page-shell">
       <aside className="sidebar">
-        <Link href="/" className="brand" aria-label="Debate Suite home">
+        <ReliableLink href="/" className="brand" aria-label="Debate Suite home">
           <span className="brand-mark">DS</span>
           <span>
             <strong className="brand-title">Debate Suite</strong>
           </span>
-        </Link>
+        </ReliableLink>
         {user ? (
           <div className="user-card">
             <strong data-language-raw>{user.name}</strong>
@@ -32,10 +32,10 @@ export function ClientShell({ activeHref, children, user }: ClientShellProps) {
         ) : null}
         <nav className="nav-group" aria-label="Primary navigation">
           {userNavigation.map((item) => (
-            <Link key={item.href} className="nav-link" href={item.href} data-active={activeHref === item.href}>
+            <ReliableLink key={item.href} className="nav-link" href={item.href} data-active={activeHref === item.href}>
               <span>{item.label}</span>
               <span>{item.badge}</span>
-            </Link>
+            </ReliableLink>
           ))}
         </nav>
         <div className="sidebar-actions">

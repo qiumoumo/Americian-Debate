@@ -17,6 +17,7 @@ desktop.ini
 *.log
 .DS_Store
 coverage/
+output/
 *.tsbuildinfo
 
 # Local SQLite databases may contain user emails, password hashes, sessions, and tokens.

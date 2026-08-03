@@ -8,7 +8,7 @@ export async function buildWorkspaceExport(workspaceId: string, workspaceName: s
     db.document.findMany({ where: { workspaceId, deletedAt: null }, include: { evidence: true } }),
     db.match.findMany({
       where: { workspaceId, deletedAt: null },
-      include: { argumentOutcomes: true, reflection: true, speechNotes: true }
+      include: { argumentOutcomes: true, reflection: true, speechNotes: true, evidence: true }
     }),
     db.membership.findMany({ where: { workspaceId }, include: { user: { select: { email: true, name: true } } } }),
     db.announcement.findMany({ where: { workspaceId } })

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { ReliableLink } from "@/components/reliable-link";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { workspaceStats } from "@debate/shared";
@@ -19,8 +19,8 @@ export default function HomePage() {
         <h1>美辩工作台</h1>
         <p>辩论资料、比赛和训练，一个本地优先的工作台。</p>
         <div className="actions">
-          <Link className="button primary" href="/app/documents">进入用户端</Link>
-          <Link className="button" href="/about">功能说明</Link>
+          <ReliableLink className="button primary" href="/app/documents">进入用户端</ReliableLink>
+          <ReliableLink className="button" href="/about">功能说明</ReliableLink>
         </div>
       </section>
 

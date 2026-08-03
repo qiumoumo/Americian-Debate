@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import type { PracticeSessionSummary } from "@debate/shared";
 import { deletePracticeSession } from "@/app/app/practice/actions";
 import { useLanguage } from "@/components/language-provider";
@@ -46,9 +46,9 @@ export function PracticeHistory({ sessions }: PracticeHistoryProps) {
             ) : null}
           </div>
           <div className="practice-history-actions">
-            <Link className="button primary" href={`/app/practice?session=${item.id}`}>
+            <ReliableLink className="button primary" href={`/app/practice?session=${item.id}`}>
               继续训练
-            </Link>
+            </ReliableLink>
             <form action={deletePracticeSession}>
               <input type="hidden" name="sessionId" value={item.id} />
               <button className="button danger" type="submit">删除</button>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { formatOptions, suggestedRoundTags } from "@debate/shared";
@@ -71,7 +71,7 @@ export default async function LibraryPage({
           <SectionCard title="录像列表" description="点击进入某场录像，查看内嵌视频并做笔记。">
             <div className="timeline">
               {rounds.map((round) => (
-                <Link
+                <ReliableLink
                   key={round.id}
                   href={`/app/library?round=${round.id}`}
                   className="timeline-item"
@@ -94,7 +94,7 @@ export default async function LibraryPage({
                       ))}
                     </div>
                   ) : null}
-                </Link>
+                </ReliableLink>
               ))}
               {rounds.length === 0 ? <p className="empty-state">还没有录像，先从左侧添加一场。</p> : null}
             </div>

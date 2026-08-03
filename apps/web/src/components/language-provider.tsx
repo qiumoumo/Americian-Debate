@@ -1,14 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   languageModes,
   type LanguageMode,
   type LanguageOverrides,
   type LanguageScope
 } from "@debate/shared";
-import { setGlobalLanguageAction, saveLanguagePreferencesAction } from "@/app/actions/language";
 import { effectiveLanguage, languageHtmlTag, scopeForPathname, type LanguagePreferences } from "@/lib/language-core";
 import { modeLabels, translateSystemText } from "@/lib/language-messages";
 
@@ -73,6 +72,18 @@ type TranslationState = { source: string; rendered: string };
 const textTranslationState = new WeakMap<Node, TranslationState>();
 const attributeTranslationState = new WeakMap<Element, Map<string, TranslationState>>();
 
+async function persistLanguage(input: {
+  globalMode: LanguageMode;
+  overrides?: LanguageOverrides;
+}) {
+  const response = await fetch("/api/language", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) throw new Error("Could not save language preference");
+}
+
 function translateTextNode(node: Node, mode: LanguageMode) {
   const current = node.nodeValue ?? "";
   const state = textTranslationState.get(node);
@@ -99,9 +110,8 @@ export function LanguageProvider({ initialPreferences, children }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [preferences, setPreferences] = useState(initialPreferences);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const scope = scopeForPathname(pathname);
   const activeMode = effectiveLanguage(preferences, scope);
 
@@ -140,29 +150,25 @@ export function LanguageProvider({ initialPreferences, children }: {
   }, [activeMode, preferences.globalMode, pathname]);
 
   const setGlobalMode = useCallback((mode: LanguageMode) => {
+    if (pending) return;
     const previous = preferences;
     setPreferences((current) => ({ ...current, globalMode: mode, source: current.source === "account" ? "account" : "cookie" }));
-    startTransition(async () => {
-      try {
-        await setGlobalLanguageAction(mode, scope);
-        router.refresh();
-      } catch {
-        setPreferences(previous);
-      }
-    });
-  }, [preferences, router, scope]);
+    setPending(true);
+    void persistLanguage({ globalMode: mode })
+      .catch(() => setPreferences(previous))
+      .finally(() => setPending(false));
+  }, [pending, preferences]);
 
   const savePreferences = useCallback(async (globalMode: LanguageMode, overrides: LanguageOverrides) => {
     const previous = preferences;
     setPreferences({ globalMode, overrides, source: "account" });
     try {
-      await saveLanguagePreferencesAction({ globalMode, overrides, currentScope: scope });
-      router.refresh();
+      await persistLanguage({ globalMode, overrides });
     } catch (error) {
       setPreferences(previous);
       throw error;
     }
-  }, [preferences, router, scope]);
+  }, [preferences]);
 
   const value = useMemo(() => ({
     preferences,

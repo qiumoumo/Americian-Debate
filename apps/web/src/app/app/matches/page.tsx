@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { AppShell } from "@/components/app-shell";
 import { formatOptions } from "@debate/shared";
 import { AIDraftPanel } from "@/components/ai-draft-panel";
@@ -17,6 +17,7 @@ import {
   getMatchEvidenceIds
 } from "@/lib/data";
 import { requireUser } from "@/lib/auth";
+import { getMatchReport } from "@/lib/match-reports";
 import { mapPrismaSide, mapPrismaFormat } from "@/lib/mappers";
 import { sessionShellUser } from "@/lib/session-props";
 import { getRoomDetails, listRoomsForUser } from "@/lib/rooms";
@@ -36,11 +37,12 @@ export default async function MatchesPage({
 
   // ----- 比赛室状态：只显示这一场比赛的计时器 / 笔记 / AI / Flow。 -----
   if (selectedMatch) {
-    const [evidence, flow, linkedEvidenceIds, room] = await Promise.all([
+    const [evidence, flow, linkedEvidenceIds, room, report] = await Promise.all([
       getEvidenceForWorkspace(session.workspace.id, session.user.id),
       getFlowForMatch(selectedMatch.id, session.user.id),
       getMatchEvidenceIds(selectedMatch.id, session.user.id),
-      getRoomDetails(selectedMatch.id, session.user.id, session.user.isSystemAdmin)
+      getRoomDetails(selectedMatch.id, session.user.id, session.user.isSystemAdmin),
+      getMatchReport({ userId: session.user.id, workspaceId: session.workspace.id }, selectedMatch.id)
     ]);
     const side = mapPrismaSide(selectedMatch.side);
     const onlineMemberIds = new Set(room.presences.map((presence) => presence.userId));
@@ -52,13 +54,21 @@ export default async function MatchesPage({
         note="比赛室：计时器、speech notes、AI 草稿、证据关联和 Live Flow 都绑定这一场比赛。"
       >
         <div className="practice-back-row">
-          <Link className="button ghost" href="/app/matches">← 返回比赛列表</Link>
+          <ReliableLink className="button ghost" href="/app/matches">← 返回比赛列表</ReliableLink>
         </div>
 
         <section className="hero">
           <div className="eyebrow">Match Room</div>
           <h1 data-language-raw>{selectedMatch.tournament} vs {selectedMatch.opponent}</h1>
           <p data-language-raw>{selectedMatch.topic}</p>
+          <div className="actions match-room-report-entry">
+            <span className={`report-status ${report.reportSubmittedAt ? "submitted" : "pending"}`}>
+              {report.reportSubmittedAt ? `赛后报告 · 第 ${report.reportRevision} 版` : "赛后报告待填写"}
+            </span>
+            <ReliableLink className="button primary" href={`/app/history?match=${selectedMatch.id}`}>
+              {report.reportSubmittedAt ? (report.canEdit ? "查看 / 修订赛后数据" : "查看赛后数据") : (report.canEdit ? "填写赛后数据" : "查看赛后数据")}
+            </ReliableLink>
+          </div>
         </section>
 
         <SectionCard title="比赛房间" description="成员、比赛内容与计时器在局域网内准实时同步。">
@@ -127,9 +137,15 @@ export default async function MatchesPage({
 
         <SectionCard
           title="Evidence 库 → 加入比赛"
-          description="搜索资料库并一键把 evidence 关联到本场比赛；加入后可撤回或移出。"
+          description={report.reportSubmittedAt
+            ? "报告已提交；Evidence 关联与评分请从赛事记录中修订。"
+            : "搜索资料库并一键把 evidence 关联到本场比赛；加入后可撤回或移出。"}
         >
-          <EvidenceLibraryPanel evidence={evidence} matchId={selectedMatch.id} linkedIds={linkedEvidenceIds} />
+          <EvidenceLibraryPanel
+            evidence={evidence}
+            matchId={report.reportSubmittedAt ? undefined : selectedMatch.id}
+            linkedIds={linkedEvidenceIds}
+          />
         </SectionCard>
 
         <div style={{ height: 18 }} />
@@ -221,7 +237,7 @@ export default async function MatchesPage({
               </div>
               <p data-language-raw>{room.match.topic}</p>
               <div className="actions">
-                <Link className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</Link>
+                <ReliableLink className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</ReliableLink>
                 <span className="pill">邀请码 {room.inviteCode}</span>
               </div>
             </article>

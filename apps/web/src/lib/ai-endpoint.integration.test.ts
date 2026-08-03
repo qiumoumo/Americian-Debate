@@ -236,7 +236,7 @@ describe("AI endpoint inspection", () => {
     await assert.rejects(
       testAIEndpointConnection({
         providerId: "openai-compatible",
-        baseUrl: "https://ai-endpoint-does-not-exist.invalid/v1",
+        baseUrl: `https://${"a".repeat(64)}.invalid/v1`,
         apiKey: "test-key",
         model: "model-alpha"
       }),

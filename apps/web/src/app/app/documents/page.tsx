@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { AppShell } from "@/components/app-shell";
 import { EvidenceCard } from "@/components/evidence-card";
 import { EvidenceImporter } from "@/components/evidence-importer";
@@ -33,7 +33,7 @@ export default async function DocumentsPage({
         note="文档编辑界面：修改标题、正文，管理这份文档的 evidence。"
       >
         <div className="practice-back-row">
-          <Link className="button ghost" href="/app/documents">← 返回文档列表</Link>
+          <ReliableLink className="button ghost" href="/app/documents">← 返回文档列表</ReliableLink>
         </div>
 
         <SectionCard title="文档信息" description="修改标题和描述。">
@@ -202,7 +202,7 @@ export default async function DocumentsPage({
               </div>
               {document.description ? <p data-language-raw>{document.description}</p> : null}
               <div className="actions">
-                <Link className="button primary" href={`/app/documents?doc=${document.id}`}>打开编辑 →</Link>
+                <ReliableLink className="button primary" href={`/app/documents?doc=${document.id}`}>打开编辑 →</ReliableLink>
                 <form action={deleteDocument}>
                   <input type="hidden" name="documentId" value={document.id} />
                   <button className="link-button danger" type="submit">删除文档</button>
