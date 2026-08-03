@@ -57,8 +57,8 @@ export default async function MatchesPage({
 
         <section className="hero">
           <div className="eyebrow">Match Room</div>
-          <h1>{selectedMatch.tournament} vs {selectedMatch.opponent}</h1>
-          <p>{selectedMatch.topic}</p>
+          <h1 data-language-raw>{selectedMatch.tournament} vs {selectedMatch.opponent}</h1>
+          <p data-language-raw>{selectedMatch.topic}</p>
         </section>
 
         <SectionCard title="比赛房间" description="成员、比赛内容与计时器在局域网内准实时同步。">
@@ -66,7 +66,7 @@ export default async function MatchesPage({
           {room.ownerId === session.user.id || session.user.isSystemAdmin ? (
             <div className="room-management">
               <div className="actions">
-                <span className="pill">房主：{room.owner.name}</span>
+                <span className="pill">房主：<span data-language-raw>{room.owner.name}</span></span>
                 <form action={rotateMatchRoomCode}>
                   <input type="hidden" name="matchId" value={selectedMatch.id} />
                   <button className="button" type="submit">更换邀请码</button>
@@ -75,7 +75,7 @@ export default async function MatchesPage({
               <div className="table-like">
                 {room.members.map((member) => (
                   <div className="table-row" key={member.id}>
-                    <div><strong>{member.user.name}</strong><br /><small>{member.user.email}</small></div>
+                    <div data-language-raw><strong>{member.user.name}</strong><br /><small>{member.user.email}</small></div>
                     <div><span className="pill">{member.status === "ACTIVE" ? "可访问" : "已移出"}</span></div>
                     <div className="actions">
                       {member.userId !== room.ownerId ? (
@@ -104,7 +104,7 @@ export default async function MatchesPage({
         <div style={{ height: 18 }} />
 
         <div className="grid two">
-          <SectionCard title="比赛笔记" description={`${selectedMatch.tournament} vs ${selectedMatch.opponent}`}>
+          <SectionCard title="比赛笔记" description={`${selectedMatch.tournament} vs ${selectedMatch.opponent}`} descriptionIsRaw>
             <SharedSpeechNotes notes={selectedMatch.speechNotes} />
             {selectedMatch.notes.length ? (
               <div className="timeline spaced">
@@ -215,11 +215,11 @@ export default async function MatchesPage({
           {rooms.map((room) => (
             <article className="timeline-item" key={room.id}>
               <div className="actions">
-                <strong>{room.match.tournament} vs {room.match.opponent}</strong>
+                <strong data-language-raw>{room.match.tournament} vs {room.match.opponent}</strong>
                 <span className="pill">{mapPrismaFormat(room.match.format)}</span>
-                <span className="pill">房主：{room.owner.name}</span>
+                <span className="pill">房主：<span data-language-raw>{room.owner.name}</span></span>
               </div>
-              <p>{room.match.topic}</p>
+              <p data-language-raw>{room.match.topic}</p>
               <div className="actions">
                 <Link className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</Link>
                 <span className="pill">邀请码 {room.inviteCode}</span>

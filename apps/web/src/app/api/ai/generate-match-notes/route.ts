@@ -8,6 +8,7 @@ import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, limitString, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { mapEvidence } from "@/lib/data";
 import { requireRoomAccess } from "@/lib/rooms";
+import { getEffectiveLanguageForUser } from "@/lib/language-server";
 
 const MAX_BODY_BYTES = 64_000;
 const MAX_EVIDENCE_IDS = 8;
@@ -20,6 +21,7 @@ function parseEvidenceIds(value: unknown) {
 
 export async function POST(request: Request) {
   const session = await requireUser();
+  const responseLanguage = await getEffectiveLanguageForUser(session.user.id, "matches");
 
   try {
     if (!checkRateLimit(`${session.user.id}:match-notes`, 5, 60_000)) {
@@ -78,7 +80,8 @@ export async function POST(request: Request) {
     const promptInput = {
       side: body.side && VALID_SIDES.includes(body.side) ? body.side : "Generic",
       speechEvidence,
-      opponentContext
+      opponentContext,
+      responseLanguage
     };
 
     if (body.copyPromptOnly) {

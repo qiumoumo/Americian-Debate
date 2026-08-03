@@ -3,6 +3,8 @@ import { SectionCard } from "@/components/section-card";
 import { requireAdmin } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
 import { getAuditLogs } from "@/lib/audit";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 
 const ACTION_LABELS: Record<string, string> = {
   "member.role_update": "修改成员角色",
@@ -29,6 +31,7 @@ function describeMeta(meta: unknown): string {
 }
 
 export default async function AdminAuditPage() {
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const session = await requireAdmin();
   const logs = await getAuditLogs(session.workspace.id, 150);
 
@@ -45,7 +48,7 @@ export default async function AdminAuditPage() {
           <div className="table-row header"><div>时间</div><div>操作人</div><div>动作</div><div>详情</div></div>
           {logs.map((log) => (
             <div className="table-row" key={log.id}>
-              <div><small>{log.createdAt.toLocaleString()}</small></div>
+              <div><small>{log.createdAt.toLocaleString(locale)}</small></div>
               <div>{log.actorName ?? "—"}</div>
               <div><span className="pill">{ACTION_LABELS[log.action] ?? log.action}</span></div>
               <div><small>{[log.targetType, describeMeta(log.metaJson)].filter(Boolean).join(" · ")}</small></div>

@@ -1,8 +1,11 @@
 import { AdminShell } from "@/components/admin-shell";
 import { SectionCard } from "@/components/section-card";
+import { LanguageSettings } from "@/components/language-settings";
 import { requireAdmin } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
 import { getAnnouncements, getSystemSettings } from "@/lib/settings";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -14,6 +17,7 @@ const FORMATS = ["PF", "LD", "POLICY", "BP", "CUSTOM"];
 
 export default async function AdminSettingsPage() {
   const session = await requireAdmin();
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const [announcements, settings] = await Promise.all([
     getAnnouncements(session.workspace.id),
     getSystemSettings(session.workspace.id)
@@ -25,8 +29,14 @@ export default async function AdminSettingsPage() {
       <section className="hero">
         <div className="eyebrow">Settings</div>
         <h1>公告与系统设置</h1>
-        <p>发布队伍公告、配置注册开关、默认赛制与密码策略。当前工作区：{session.workspace.name}。</p>
+        <p>发布队伍公告、配置注册开关、默认赛制与密码策略。当前工作区：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
+
+      <SectionCard title="语言与模块偏好" description="此偏好属于当前管理员账号，并与用户端共享。">
+        <LanguageSettings />
+      </SectionCard>
+
+      <div style={{ height: 18 }} />
 
       <SectionCard title="发布公告" description="已发布的公告会显示在成员的用户端。">
         <form action={createAnnouncement} className="stack">
@@ -53,8 +63,8 @@ export default async function AdminSettingsPage() {
           <div className="table-row header"><div>时间</div><div>标题</div><div>状态</div><div>操作</div></div>
           {announcements.map((item) => (
             <div className="table-row" key={item.id}>
-              <div><small>{item.createdAt.toLocaleDateString()}</small></div>
-              <div><strong>{item.title}</strong><br /><small>{item.body}</small></div>
+              <div><small>{item.createdAt.toLocaleDateString(locale)}</small></div>
+              <div data-language-raw><strong>{item.title}</strong><br /><small>{item.body}</small></div>
               <div><span className="pill">{item.published ? "已发布" : "草稿"}</span></div>
               <div className="action-cell">
                 <form action={toggleAnnouncement} className="inline-form">

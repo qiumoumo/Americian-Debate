@@ -49,7 +49,7 @@ export default async function AdminWorkspacesPage({
             return (
               <div className="table-row" key={ws.id}>
                 <div>
-                  <strong>{ws.name}</strong>
+                  <strong data-language-raw>{ws.name}</strong>
                   {isCurrent ? <span className="pill">当前</span> : null}
                 </div>
                 <div><small>{ws.memberCount} 成员 · {ws.documentCount} 文档 · {ws.matchCount} 比赛</small></div>

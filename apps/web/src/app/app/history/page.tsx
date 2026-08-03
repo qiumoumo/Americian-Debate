@@ -42,8 +42,8 @@ export default async function HistoryPage() {
           <div className="timeline">
             {rawMatches.map((match) => (
               <article className="timeline-item" key={match.id}>
-                <strong>{match.tournament} vs {match.opponent}</strong>
-                <p>{match.topic} · {match.format} · {match.side} · {match.result}</p>
+                <strong data-language-raw>{match.tournament} vs {match.opponent}</strong>
+                <p data-language-raw>{match.topic} · {match.format} · {match.side} · {match.result}</p>
                 <form action={saveReflection} className="form-grid compact">
                   <input type="hidden" name="matchId" value={match.id} />
                   <label className="field"><span>What worked</span><textarea name="whatWorked" defaultValue={match.reflection?.whatWorked ?? ""} rows={2} /></label>
@@ -64,7 +64,7 @@ export default async function HistoryPage() {
             {matches.flatMap((match) => match.argumentOutcomes.map((outcome, index) => ({ match, outcome, index }))).map(({ match, outcome, index }) => (
               <div className="timeline-item" key={outcome.id ?? `${match.id}-${index}`}>
                 <strong>{outcome.argument}</strong>
-                <p>{match.tournament} · {outcome.side} · {outcome.outcome}</p>
+                <p data-language-raw>{match.tournament} · {outcome.side} · {outcome.outcome}</p>
               </div>
             ))}
           </div>

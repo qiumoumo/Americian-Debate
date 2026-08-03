@@ -3,6 +3,7 @@ import { AIConfigCommandForm } from "@/components/ai-config-command-form";
 import { AIConfigForm } from "@/components/ai-config-form";
 import { AISelectionForm } from "@/components/ai-selection-form";
 import { ProviderHealthCard } from "@/components/provider-health-card";
+import { LanguageSettings } from "@/components/language-settings";
 import { SectionCard } from "@/components/section-card";
 import { getGlobalAIConfigs, getUserAIConfigs, getUserAISelection, isAIModelDiscoveryEnabled } from "@/lib/ai-config";
 import { requireUser } from "@/lib/auth";
@@ -58,6 +59,12 @@ export default async function SettingsPage() {
         <p>你可以在管理员提供的全局 AI 与自己的私有配置之间自由切换。</p>
       </section>
 
+      <SectionCard title="语言与模块偏好" description="设置全局语言，或让某个功能模块使用不同语言。模块覆盖不会被全局切换清除。">
+        <LanguageSettings />
+      </SectionCard>
+
+      <div style={{ height: 18 }} />
+
       <div className="grid two">
         <SectionCard title="选择使用的 AI" description="所选配置不可用时，自动回退到全局默认，再回退服务器默认。">
           <AISelectionForm
@@ -70,7 +77,7 @@ export default async function SettingsPage() {
         <SectionCard title="当前生效" description="下一次 AI 请求将使用这套配置。">
           <div className="table-like compact-table">
             <div className="table-row"><div><strong>来源</strong></div><div><span className="pill">{effective.source}</span></div><div /></div>
-            <div className="table-row"><div><strong>名称</strong></div><div>{effective.name}</div><div /></div>
+            <div className="table-row"><div><strong>名称</strong></div><div data-language-raw>{effective.name}</div><div /></div>
             <div className="table-row"><div><strong>Provider</strong></div><div>{effective.providerId}</div><div /></div>
             <div className="table-row"><div><strong>Model</strong></div><div>{effective.model || "—"}</div><div /></div>
           </div>
@@ -87,7 +94,7 @@ export default async function SettingsPage() {
           <div className="ai-public-config-list">
             {globalConfigs.map((config) => (
               <div className="ai-public-config-row" key={config.id}>
-                <div><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></div>
+                <div data-language-raw><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></div>
                 {config.isDefault ? <span className="pill">默认</span> : null}
               </div>
             ))}
@@ -103,7 +110,7 @@ export default async function SettingsPage() {
           {personalConfigs.map((config) => (
             <details className="ai-config-row" key={config.id}>
               <summary>
-                <span className="ai-config-summary-main"><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></span>
+                <span className="ai-config-summary-main" data-language-raw><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></span>
                 <span className="actions">
                   <span className="pill">{config.enabled ? "已启用" : "已停用"}</span>
                   <span className="pill">Key {config.hasKey ? "已配置" : "未配置"}</span>

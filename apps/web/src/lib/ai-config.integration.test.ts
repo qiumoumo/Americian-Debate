@@ -349,7 +349,7 @@ describe("AI configuration service", () => {
       await aiConfig.setDefaultGlobalAIConfig(saved.id);
 
       const resolved = await aiConfig.resolveAIProvider({ userId: user.id, workspaceId: "unused" });
-      const reply = await resolved.provider.chat({ messages: [{ role: "user", content: "local test" }] });
+      const reply = await resolved.provider.chat({ messages: [{ role: "user", content: "local test" }], responseLanguage: "en" });
       assert.equal(reply.text, "runtime-ok");
       assert.ok(requests.some((request) => request.method === "GET" && request.url === "/v1/models"));
       assert.ok(requests.some((request) => request.method === "POST" && request.url === "/v1/chat/completions"));

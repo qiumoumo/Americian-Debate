@@ -5,6 +5,8 @@ import { StatCard } from "@/components/stat-card";
 import { getAdminDashboard } from "@/lib/data";
 import { requireAdmin } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 import { getAIProviderConfigStatus } from "@debate/ai";
 
 const quickLinks = [
@@ -19,6 +21,7 @@ const quickLinks = [
 
 export default async function AdminPage() {
   const session = await requireAdmin();
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const dashboard = await getAdminDashboard(session.workspace.id);
   const aiStatus = getAIProviderConfigStatus();
 
@@ -73,7 +76,7 @@ export default async function AdminPage() {
           <div className="table-row header"><div>Task</div><div>Provider / model</div><div>Tokens / cost</div></div>
           {dashboard.aiLogs.map((log) => (
             <div className="table-row" key={log.id}>
-              <div><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString()} / {log.requestStatus}</small></div>
+              <div data-language-raw><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString(locale)} / {log.requestStatus}</small></div>
               <div>{log.provider}<br /><span className="pill">{log.model}</span></div>
               <div>in {log.inputTokenEstimate} / out {log.outputTokenEstimate}<br /><small>{log.costEstimateCents} cents est.</small></div>
             </div>

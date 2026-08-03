@@ -110,17 +110,17 @@ export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: Evid
               <div className="library-item-main">
                 <div className="evidence-meta">
                   <span className={`pill side-pill side-${card.side.toLowerCase()}`}>{card.side}</span>
-                  {card.tags.slice(0, 4).map((tag) => (<span key={tag} className="pill">#{tag}</span>))}
+                  {card.tags.slice(0, 4).map((tag) => (<span key={tag} className="pill" data-language-raw>#{tag}</span>))}
                   {issues.map((issue) => (
                     <span key={issue.code} className={`issue-badge ${issue.level}`} title={issue.message}>{issue.code}</span>
                   ))}
                 </div>
-                <strong>{card.title}</strong>
-                <p className="library-claim">{card.claim}</p>
-                <p className="library-uploader">
+                <strong data-language-raw>{card.title}</strong>
+                <p className="library-claim" data-language-raw>{card.claim}</p>
+                <p className="library-uploader" data-language-raw>
                   {card.isMine ? "我上传" : `由 ${card.uploaderName ?? "未知用户"} / ${card.uploaderWorkspaceName ?? "未知工作区"} 上传`}
                 </p>
-                <p className="library-source">
+                <p className="library-source" data-language-raw>
                   {card.author ?? "Unknown author"} · {card.publication ?? "Unknown publication"} · {card.publishedDate ?? "No date"}
                 </p>
                 {card.sourceUrl ? <a className="library-source-link" href={card.sourceUrl} target="_blank" rel="noreferrer">打开原始来源</a> : null}

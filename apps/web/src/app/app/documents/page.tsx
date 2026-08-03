@@ -167,8 +167,8 @@ export default async function DocumentsPage({
           <div className="timeline">
             {announcements.map((item) => (
               <div className="timeline-item" key={item.id}>
-                <strong>{item.title}</strong>
-                {item.body ? <p>{item.body}</p> : null}
+                <strong data-language-raw>{item.title}</strong>
+                {item.body ? <p data-language-raw>{item.body}</p> : null}
               </div>
             ))}
           </div>
@@ -196,11 +196,11 @@ export default async function DocumentsPage({
           {documents.map((document) => (
             <article className="timeline-item" key={document.id}>
               <div className="actions">
-                <strong>{document.title}</strong>
+                <strong data-language-raw>{document.title}</strong>
                 <span className="pill">Updated {document.updatedAt}</span>
                 <span className="pill">{document.evidence.length} cards</span>
               </div>
-              {document.description ? <p>{document.description}</p> : null}
+              {document.description ? <p data-language-raw>{document.description}</p> : null}
               <div className="actions">
                 <Link className="button primary" href={`/app/documents?doc=${document.id}`}>打开编辑 →</Link>
                 <form action={deleteDocument}>

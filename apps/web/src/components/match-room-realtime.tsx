@@ -86,7 +86,7 @@ export function MatchRoomRealtime({ matchId, initialRevision }: { matchId: strin
       {displaced ? <p className="status-error">此账号已在另一个房间上线，本页停止同步。</p> : null}
       <div className="room-meta-row">
         <div><span className="small-note">邀请码</span><strong className="room-code">{snapshot.inviteCode}</strong></div>
-        <div><span className="small-note">在线成员</span><div className="actions">{snapshot.members.map((member) => <span className="pill" key={member.id}>{member.name}</span>)}</div></div>
+        <div><span className="small-note">在线成员</span><div className="actions">{snapshot.members.map((member) => <span className="pill" key={member.id} data-language-raw>{member.name}</span>)}</div></div>
       </div>
       <div className="timer-face" aria-label={`共享计时器 ${formatTime(effectiveTimer.remainingMs)}`}>
         <span className="timer-stage">{effectiveTimer.mode === "prep" ? `Prep (${effectiveTimer.prepSide})` : speech?.speech}</span>

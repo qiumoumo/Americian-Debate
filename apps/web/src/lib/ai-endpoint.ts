@@ -381,6 +381,7 @@ export async function testAIEndpointConnection(input: AIEndpointInput, options: 
       });
       await provider.chat({
         messages: [{ role: "user", content: "Reply with OK." }],
+        responseLanguage: "en",
         maxOutputTokens: input.providerId === "anthropic" ? 8 : undefined,
         timeoutMs
       });

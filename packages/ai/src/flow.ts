@@ -1,4 +1,5 @@
-import type { Evidence, Side } from "@debate/shared";
+import type { Evidence, LanguageMode, Side } from "@debate/shared";
+import { responseLanguageInstruction } from "./language.ts";
 import { messagesFromPromptBundle, promptBundleToCopyText, type AIProvider, type PromptBundle } from "./index.ts";
 import { flowRebuttalSuggestionsJsonSchema, normalizeFlowRebuttalSuggestions, type FlowRebuttalSuggestionsShape } from "./schemas.ts";
 
@@ -9,6 +10,7 @@ export interface GenerateFlowRebuttalInput {
   opponentArgument: string;
   evidence: Evidence[];
   flowContext?: string;
+  responseLanguage: LanguageMode;
 }
 
 export type FlowRebuttalSuggestions = FlowRebuttalSuggestionsShape;
@@ -22,6 +24,7 @@ export function buildFlowRebuttalPrompt(input: Omit<GenerateFlowRebuttalInput, "
       "Aim to include at least one 'answer' and, when the argument has offense, at least one 'turn' and one 'weigh'.",
       "Only reference evidence IDs included in the user's evidence list; never invent IDs.",
       "Each response is a draft the debater will confirm before writing on the flow. Be concise and judge-ready."
+      , responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       side: input.side,
@@ -44,7 +47,8 @@ export async function generateFlowRebuttalSuggestions(input: GenerateFlowRebutta
   const raw = await input.provider.generateStructured<unknown>({
     schemaName: "FlowRebuttalSuggestions",
     schema: flowRebuttalSuggestionsJsonSchema,
-    messages: messagesFromPromptBundle(prompt)
+    messages: messagesFromPromptBundle(prompt),
+    responseLanguage: input.responseLanguage
   });
 
   return normalizeFlowRebuttalSuggestions(raw, allowedEvidenceIds);

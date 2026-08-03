@@ -502,7 +502,7 @@ function FlowRowCells({
           <span className="pill">{row.side}</span>
           {riskyCount > 0 ? <span className="flow-risk-badge" title="dropped / conceded 数量">⚠ {riskyCount}</span> : null}
         </div>
-        <strong>{row.title || "未命名论点"}</strong>
+        <strong data-language-raw>{row.title || "未命名论点"}</strong>
         {row.category && row.category !== "general" ? <span className="small-note">{row.category}</span> : null}
         <WeighingPanel row={row} onWeighingChange={onWeighingChange} />
         <form action={deleteFlowRow}>
@@ -698,18 +698,18 @@ function EvidenceChip({ evidenceId, evidence }: EvidenceChipProps) {
 
   return (
     <span className="flow-chip-wrap">
-      <button className="pill flow-chip" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+      <button className="pill flow-chip" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} data-language-raw>
         {evidence.title}
       </button>
       {open ? (
         <span className="flow-chip-pop" role="dialog">
           <span className="flow-chip-pop-head">
-            <strong>{evidence.title}</strong>
+            <strong data-language-raw>{evidence.title}</strong>
             <button className="link-button" type="button" onClick={() => setOpen(false)} aria-label="关闭">×</button>
           </span>
-          {evidence.claim ? <span className="flow-chip-claim">{evidence.claim}</span> : null}
-          {evidence.quote ? <span className="flow-chip-quote">“{evidence.quote}”</span> : null}
-          <span className="flow-chip-meta">
+          {evidence.claim ? <span className="flow-chip-claim" data-language-raw>{evidence.claim}</span> : null}
+          {evidence.quote ? <span className="flow-chip-quote" data-language-raw>“{evidence.quote}”</span> : null}
+          <span className="flow-chip-meta" data-language-raw>
             {[evidence.author, evidence.publication, evidence.publishedDate].filter(Boolean).join(" · ") || "无来源信息"}
           </span>
           {evidence.sourceUrl ? (
@@ -775,7 +775,7 @@ function FlowAssistant({
         <strong>AI 反驳 · {cell.speechType}</strong>
         <button className="link-button" type="button" onClick={onClose}>收起</button>
       </div>
-      <p className="small-note">对方论点：{cell.content.trim() || "（先在单元格填写对方论点）"}</p>
+      <p className="small-note">对方论点：<span data-language-raw>{cell.content.trim() || "（先在单元格填写对方论点）"}</span></p>
       <div className="evidence-picker">
         {evidence.map((card) => (
           <label className="check-card" key={card.id}>
@@ -785,8 +785,8 @@ function FlowAssistant({
               onChange={() => onToggleEvidence(card.id)}
             />
             <span>
-              <strong>{card.title}</strong>
-              <small>{card.side} · {card.tags.join(", ")}</small>
+              <strong data-language-raw>{card.title}</strong>
+              <small data-language-raw>{card.side} · {card.tags.join(", ")}</small>
             </span>
           </label>
         ))}
@@ -812,7 +812,7 @@ function FlowAssistant({
             <section className="flow-suggestion-group" key={group.category}>
               <h4 className={`flow-cat-title flow-kind-${group.category}`}>{CATEGORY_LABEL[group.category]}</h4>
               {group.items.map((suggestion, index) => (
-                <article className="flow-suggestion" key={`${suggestion.label}-${index}`}>
+                <article className="flow-suggestion" key={`${suggestion.label}-${index}`} data-language-raw>
                   <div className="evidence-meta">
                     <span className={`flow-kind-badge flow-kind-${suggestion.category}`}>{KIND_LABEL[suggestion.category]}</span>
                     <span className="pill">{suggestion.label}</span>

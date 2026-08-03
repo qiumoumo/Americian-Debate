@@ -9,22 +9,27 @@ const ADMIN_SESSION_COOKIE = "debate_admin_session";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-debate-pathname", pathname);
+  const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } });
+
   // The admin login page must stay reachable without an admin session.
   if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
-    return NextResponse.next();
+    return continueRequest();
   }
 
-  const hasAdminCookie = Boolean(request.cookies.get(ADMIN_SESSION_COOKIE)?.value);
-  if (!hasAdminCookie) {
+  if (pathname.startsWith("/admin")) {
+    const hasAdminCookie = Boolean(request.cookies.get(ADMIN_SESSION_COOKIE)?.value);
+    if (hasAdminCookie) return continueRequest();
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return continueRequest();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
 };

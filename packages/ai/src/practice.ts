@@ -1,6 +1,7 @@
-import type { AiPersona, DebateFormat, PracticeMode, PracticeRoundState, Side } from "@debate/shared";
+import type { AiPersona, DebateFormat, LanguageMode, PracticeMode, PracticeRoundState, Side } from "@debate/shared";
 import { aiPersonaDirectives } from "@debate/shared";
 import { messagesFromPromptBundle, promptBundleToCopyText, type AIProvider, type PromptBundle } from "./index.ts";
+import { responseLanguageInstruction } from "./language.ts";
 import {
   normalizePracticeDrills,
   normalizePracticeFeedback,
@@ -31,6 +32,7 @@ export interface GeneratePracticeReplyInput {
   transcript: Array<{ role: "user" | "assistant"; content: string }>;
   userMessage: string;
   context?: PracticeContext;
+  responseLanguage: LanguageMode;
 }
 
 export interface GeneratePracticeFeedbackInput {
@@ -40,6 +42,7 @@ export interface GeneratePracticeFeedbackInput {
   side: Side;
   transcript: Array<{ role: "user" | "assistant"; content: string }>;
   context?: PracticeContext;
+  responseLanguage: LanguageMode;
 }
 
 function defaultRubricFocus(input?: PracticeContext) {
@@ -101,7 +104,8 @@ export function buildPracticeOpponentPrompt(input: Omit<GeneratePracticeReplyInp
       "Stay in round, answer as the opposing side, and keep replies short enough for text practice.",
       "Pressure weak links, identify dropped arguments, and force comparative weighing.",
       aiPersonaDirectives[persona],
-      "Do not pretend to be a real person."
+      "Do not pretend to be a real person.",
+      responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       topic: input.topic,
@@ -132,6 +136,7 @@ export function buildPracticeFeedbackPrompt(input: Omit<GeneratePracticeFeedback
       "You are a debate coach. Return JSON feedback only.",
       "Score five rubric dimensions 0-100 each (clash, evidenceExtension, weighing, collapse, lineByLineEfficiency), each with a concise comment.",
       "Also give an overall 0-100 score, a short feedback paragraph, strengths, weaknesses, and next drills."
+      , responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       topic: input.topic,
@@ -185,8 +190,11 @@ export function buildPracticeFeedbackCopyPrompt(input: Omit<GeneratePracticeFeed
 export async function generatePracticeOpponentReply(input: GeneratePracticeReplyInput) {
   const messages = messagesFromPromptBundle(buildPracticeOpponentPrompt(input));
 
-  const result = await input.provider.chat({ messages });
-  return result.text || "Mock opponent: Answer with weighing, then pressure the link chain.";
+  const result = await input.provider.chat({ messages, responseLanguage: input.responseLanguage });
+  if (result.text) return result.text;
+  if (input.responseLanguage === "zh-CN") return "模拟对手：先比较双方影响，再追问论证链条。";
+  if (input.responseLanguage === "zh-terms-en") return "模拟对手：先做 comparative weighing，再追问 link chain。";
+  return "Mock opponent: Answer with weighing, then pressure the link chain.";
 }
 
 export async function generatePracticeFeedback(input: GeneratePracticeFeedbackInput): Promise<PracticeFeedbackShape> {
@@ -194,7 +202,8 @@ export async function generatePracticeFeedback(input: GeneratePracticeFeedbackIn
   const raw = await input.provider.generateStructured<unknown>({
     schemaName: "PracticeFeedback",
     schema: practiceFeedbackJsonSchema,
-    messages: messagesFromPromptBundle(prompt)
+    messages: messagesFromPromptBundle(prompt),
+    responseLanguage: input.responseLanguage
   });
 
   return normalizePracticeFeedback(raw);
@@ -209,6 +218,7 @@ export interface SummarizePracticeInput {
   priorSummary: string;
   /** The turns being compressed out of the live transcript, in order. */
   turnsToCompress: Array<{ role: "user" | "assistant"; content: string }>;
+  responseLanguage: LanguageMode;
 }
 
 export function buildPracticeSummaryPrompt(input: Omit<SummarizePracticeInput, "provider">): PromptBundle {
@@ -218,6 +228,7 @@ export function buildPracticeSummaryPrompt(input: Omit<SummarizePracticeInput, "
       "Preserve what matters for continuing the round: each side's positions, arguments already made and dropped,",
       "key clashes, concessions, evidence referenced, and open weighing threads.",
       "Do not add new analysis or opinions. Be terse. Output plain prose, no markdown, under 220 words."
+      , responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       topic: input.topic,
@@ -244,7 +255,7 @@ export async function summarizePracticeTranscript(input: SummarizePracticeInput)
   }
 
   const messages = messagesFromPromptBundle(buildPracticeSummaryPrompt(input));
-  const result = await input.provider.chat({ messages, temperatureHint: "focused" });
+  const result = await input.provider.chat({ messages, temperatureHint: "focused", responseLanguage: input.responseLanguage });
   const summary = result.text.trim();
   // Never lose the prior summary if the provider returns nothing usable.
   return summary || input.priorSummary;
@@ -262,6 +273,7 @@ export interface GeneratePracticeDrillsInput {
   transcript?: Array<{ role: "user" | "assistant"; content: string }>;
   /** 期望生成的 drill 数量（默认 3）。 */
   count?: number;
+  responseLanguage: LanguageMode;
 }
 
 export function buildPracticeDrillsPrompt(input: Omit<GeneratePracticeDrillsInput, "provider">): PromptBundle {
@@ -271,6 +283,7 @@ export function buildPracticeDrillsPrompt(input: Omit<GeneratePracticeDrillsInpu
       "You are a debate drill coach. Return only JSON matching the requested shape.",
       "Generate short, concrete practice tasks the debater can do right now, e.g. '30-second weighing drill', 'answer this turn', 'collapse to one voter'.",
       "Each drill targets one rubric dimension and includes an actual promptText the debater must respond to."
+      , responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       topic: input.topic,
@@ -306,7 +319,8 @@ export async function generatePracticeDrills(input: GeneratePracticeDrillsInput)
   const raw = await input.provider.generateStructured<unknown>({
     schemaName: "PracticeDrills",
     schema: practiceDrillsJsonSchema,
-    messages: messagesFromPromptBundle(prompt)
+    messages: messagesFromPromptBundle(prompt),
+    responseLanguage: input.responseLanguage
   });
 
   return normalizePracticeDrills(raw);

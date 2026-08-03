@@ -30,7 +30,7 @@ export function AppShell({ activeHref, children, note, user }: AppShellProps) {
         </Link>
         {user ? (
           <div className="user-card">
-            <strong>{user.name}</strong>
+            <strong data-language-raw>{user.name}</strong>
             <span>{user.email}</span>
             <span className="pill">{user.role}</span>
             <small>{user.workspaceName}</small>

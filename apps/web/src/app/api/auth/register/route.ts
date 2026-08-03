@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth";
 import { redirectToRequestHost } from "@/lib/api-route-utils";
 import { getSystemSettings } from "@/lib/settings";
+import { languageModeFromRequest, LANGUAGE_COOKIE_OPTIONS } from "@/lib/language-server";
+import { LANGUAGE_COOKIE } from "@/lib/language-core";
 
 function fail(request: Request, code: string, invite?: string) {
   const suffix = invite ? `&invite=${encodeURIComponent(invite)}` : "";
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
   const email = normalizeEmail(String(formData?.get("email") ?? ""));
   const password = String(formData?.get("password") ?? "");
   const inviteToken = String(formData?.get("invite") ?? "").trim();
+  const languageMode = languageModeFromRequest(request);
 
   if (!name || !email || !email.includes("@")) {
     return fail(request, "invalid", inviteToken);
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
 
   try {
     ({ user, workspace } = await db.$transaction(async (tx) => {
-      const createdUser = await tx.user.create({ data: { name, email, passwordHash } });
+      const createdUser = await tx.user.create({ data: { name, email, passwordHash, languageMode } });
 
       if (invitation) {
         await tx.membership.create({
@@ -83,5 +86,6 @@ export async function POST(request: Request) {
   const { token } = await createSession(user.id, workspace.id);
   const response = redirectToRequestHost(request, "/app/documents");
   response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+  response.cookies.set(LANGUAGE_COOKIE, languageMode, LANGUAGE_COOKIE_OPTIONS);
   return response;
 }

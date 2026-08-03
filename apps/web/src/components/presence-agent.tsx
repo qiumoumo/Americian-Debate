@@ -58,7 +58,7 @@ export function PresenceAgent() {
       <aside className="room-invite-dialog">
         <strong>{invitation.inviterName} 邀请你加入比赛房间</strong>
         <h2>{invitation.matchTitle}</h2>
-        <p>{invitation.topic}</p>
+        <p data-language-raw>{invitation.topic}</p>
         <p className="small-note">接受后会离开当前房间的在线状态并进入此房间。</p>
         {error ? <p className="status-error">{error}</p> : null}
         <div className="actions">

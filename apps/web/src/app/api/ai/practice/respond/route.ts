@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, limitString, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { getPracticeSession, readPracticeSummary, readRubricFocus, readTranscript } from "@/lib/data";
+import { getEffectiveLanguageForUser } from "@/lib/language-server";
 
 const MAX_BODY_BYTES = 32_000;
 const MAX_MESSAGE_LENGTH = 4_000;
@@ -40,6 +41,7 @@ async function withPracticeLock<T>(sessionId: string, action: () => Promise<T>) 
 
 export async function POST(request: Request) {
   const session = await requireUser();
+  const responseLanguage = await getEffectiveLanguageForUser(session.user.id, "practice");
 
   try {
     if (!checkRateLimit(`${session.user.id}:practice-reply`, 10, 60_000)) {
@@ -103,7 +105,8 @@ export async function POST(request: Request) {
           roundPhase: roundState.phaseLabel,
           rubricFocus: readRubricFocus(practice.rubricJson),
           conversationSummary
-        }
+        },
+        responseLanguage
       } as const;
 
       if (body.copyPromptOnly) {
@@ -140,7 +143,8 @@ export async function POST(request: Request) {
               format,
               side,
               priorSummary: latestSummary.summary,
-              turnsToCompress
+              turnsToCompress,
+              responseLanguage
             });
             compressedSummaryJson = { summary: summaryText, coveredTurns: compressUpTo };
 
