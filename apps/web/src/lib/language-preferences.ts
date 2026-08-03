@@ -27,3 +27,14 @@ export async function saveAccountLanguagePreferences(userId: string, input: {
     select: { id: true, languageMode: true, languageOverridesJson: true }
   });
 }
+
+export async function saveGlobalLanguagePreference(userId: string, globalMode: LanguageMode) {
+  const update = sanitizePreferenceUpdate({ globalMode });
+  if (!update.globalMode) throw new Error("Global language mode is required");
+
+  return db.user.update({
+    where: { id: userId },
+    data: { languageMode: update.globalMode },
+    select: { id: true, languageMode: true }
+  });
+}

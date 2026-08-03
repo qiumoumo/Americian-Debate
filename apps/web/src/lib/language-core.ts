@@ -16,6 +16,34 @@ export interface LanguagePreferences {
   source: "account" | "cookie" | "browser";
 }
 
+export type LanguageSurface = "user" | "admin";
+
+export function languageSurfaceForRequest(request: {
+  url: string;
+  headers: { get(name: string): string | null };
+}): LanguageSurface | null {
+  const referrer = request.headers.get("referer");
+  if (!referrer) return null;
+
+  try {
+    const requestUrl = new URL(request.url);
+    const referrerUrl = new URL(referrer);
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim().toLowerCase();
+    const requestHosts = [request.headers.get("host")?.trim().toLowerCase(), forwardedHost].filter(Boolean);
+    if (!requestHosts.length) requestHosts.push(requestUrl.host.toLowerCase());
+    const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+    const requestProtocol = forwardedProtocol === "http" || forwardedProtocol === "https"
+      ? `${forwardedProtocol}:`
+      : requestUrl.protocol;
+    if (!requestHosts.includes(referrerUrl.host.toLowerCase()) || referrerUrl.protocol !== requestProtocol) return null;
+    return referrerUrl.pathname === "/admin" || referrerUrl.pathname.startsWith("/admin/")
+      ? "admin"
+      : "user";
+  } catch {
+    return null;
+  }
+}
+
 export function parseLanguageOverrides(value: unknown): LanguageOverrides {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const result: LanguageOverrides = {};

@@ -21,6 +21,7 @@ interface LanguageContextValue {
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
+type GlobalSaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function useLanguage() {
   const value = useContext(LanguageContext);
@@ -112,10 +113,14 @@ export function LanguageProvider({ initialPreferences, children }: {
   const pathname = usePathname();
   const [preferences, setPreferences] = useState(initialPreferences);
   const [pending, setPending] = useState(false);
+  const [globalSaveStatus, setGlobalSaveStatus] = useState<GlobalSaveStatus>("idle");
   const scope = scopeForPathname(pathname);
   const activeMode = effectiveLanguage(preferences, scope);
 
-  useEffect(() => setPreferences(initialPreferences), [initialPreferences]);
+  useEffect(() => {
+    setPreferences(initialPreferences);
+    setGlobalSaveStatus("idle");
+  }, [initialPreferences]);
 
   useEffect(() => {
     translateDocument(activeMode, preferences.globalMode);
@@ -150,14 +155,27 @@ export function LanguageProvider({ initialPreferences, children }: {
   }, [activeMode, preferences.globalMode, pathname]);
 
   const setGlobalMode = useCallback((mode: LanguageMode) => {
-    if (pending) return;
+    if (pending || mode === preferences.globalMode) return;
     const previous = preferences;
     setPreferences((current) => ({ ...current, globalMode: mode, source: current.source === "account" ? "account" : "cookie" }));
     setPending(true);
+    setGlobalSaveStatus("saving");
     void persistLanguage({ globalMode: mode })
-      .catch(() => setPreferences(previous))
+      .then(() => setGlobalSaveStatus("saved"))
+      .catch(() => {
+        setPreferences(previous);
+        setGlobalSaveStatus("error");
+      })
       .finally(() => setPending(false));
   }, [pending, preferences]);
+
+  const globalSaveMessage = globalSaveStatus === "saving"
+    ? (preferences.globalMode === "en" ? "Saving..." : "保存中...")
+    : globalSaveStatus === "saved"
+      ? (preferences.globalMode === "en" ? "Saved" : "已保存")
+      : globalSaveStatus === "error"
+        ? (preferences.globalMode === "en" ? "Save failed" : "保存失败")
+        : null;
 
   const savePreferences = useCallback(async (globalMode: LanguageMode, overrides: LanguageOverrides) => {
     const previous = preferences;
@@ -182,8 +200,8 @@ export function LanguageProvider({ initialPreferences, children }: {
   return (
     <LanguageContext.Provider value={value}>
       <div className="language-utility" data-language-ignore lang={languageHtmlTag(preferences.globalMode)}>
-        <span className="language-utility-label">{preferences.globalMode === "en" ? "Language" : "语言"}</span>
-        <div className="language-segments" role="group" aria-label="Language">
+        <span className="language-utility-label">{preferences.globalMode === "en" ? "Global language" : "全局语言"}</span>
+        <div className="language-segments" role="group" aria-label={preferences.globalMode === "en" ? "Global language" : "全局语言"}>
           {languageModes.map((mode) => (
             <button
               key={mode}
@@ -198,6 +216,11 @@ export function LanguageProvider({ initialPreferences, children }: {
             </button>
           ))}
         </div>
+        {globalSaveMessage ? (
+          <span className="language-save-status" data-status={globalSaveStatus} role="status" aria-live="polite">
+            {globalSaveMessage}
+          </span>
+        ) : null}
         {preferences.overrides[scope] ? (
           <span className="language-override-badge">
             {preferences.globalMode === "en" ? "This module:" : "本模块："} {modeLabels[activeMode].short}

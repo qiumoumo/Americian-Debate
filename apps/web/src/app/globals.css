@@ -96,6 +96,21 @@ body {
   opacity: 0.62;
 }
 
+.language-save-status {
+  min-width: 3.25rem;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.language-save-status[data-status="saved"] {
+  color: var(--accent);
+}
+
+.language-save-status[data-status="error"] {
+  color: var(--danger);
+}
+
 .language-override-badge {
   padding: 5px 8px;
   border: 1px solid var(--line);
@@ -162,7 +177,15 @@ body {
   }
 
   .language-override-badge {
-    max-width: 112px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .language-save-status {
+    min-width: 0;
+    max-width: 64px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

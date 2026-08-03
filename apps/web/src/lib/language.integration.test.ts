@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   browserDefaultLanguage,
   effectiveLanguage,
+  languageSurfaceForRequest,
   parseLanguageOverrides,
   resolveLanguagePreferences,
   sanitizePreferenceUpdate,
@@ -47,6 +48,26 @@ describe("language preference interface", () => {
     ];
     assert.equal(selectLanguageSession({ sessions, userToken: "user-token", adminToken: "admin-token", scope: "settings" })?.userId, "user-account");
     assert.equal(selectLanguageSession({ sessions, userToken: "user-token", adminToken: "admin-token", scope: "admin" })?.userId, "admin-account");
+  });
+
+  it("derives the account surface from the browser-facing host", () => {
+    const headers = new Headers({
+      host: "127.0.0.1:3000",
+      referer: "http://127.0.0.1:3000/app/documents"
+    });
+    assert.equal(languageSurfaceForRequest({ url: "http://localhost:3000/api/language", headers }), "user");
+
+    headers.set("referer", "http://127.0.0.1:3000/admin/settings");
+    assert.equal(languageSurfaceForRequest({ url: "http://localhost:3000/api/language", headers }), "admin");
+
+    headers.set("referer", "http://untrusted.local/app/documents");
+    assert.equal(languageSurfaceForRequest({ url: "http://localhost:3000/api/language", headers }), null);
+
+    headers.set("host", "web.internal:3000");
+    headers.set("x-forwarded-host", "debate.example");
+    headers.set("x-forwarded-proto", "https");
+    headers.set("referer", "https://debate.example/admin/settings");
+    assert.equal(languageSurfaceForRequest({ url: "http://web.internal:3000/api/language", headers }), "admin");
   });
 
   it("rejects unknown modes and scopes at the write seam", () => {

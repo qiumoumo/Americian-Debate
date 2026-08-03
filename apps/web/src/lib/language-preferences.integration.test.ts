@@ -39,6 +39,21 @@ describe("account language preference persistence", () => {
     });
   });
 
+  it("updates the global mode without changing module overrides", async () => {
+    const user = await db.user.create({ data: { email: "global-language@test.local", name: "Global Language" } });
+    await preferences.saveAccountLanguagePreferences(user.id, {
+      globalMode: "zh-CN",
+      overrides: { matches: "en", practice: "zh-terms-en" }
+    });
+
+    await preferences.saveGlobalLanguagePreference(user.id, "en");
+
+    assert.deepEqual(await preferences.readAccountLanguagePreferences(user.id), {
+      globalMode: "en",
+      overrides: { matches: "en", practice: "zh-terms-en" }
+    });
+  });
+
   it("rejects invalid values before writing", async () => {
     const user = await db.user.create({ data: { email: "invalid-language@test.local", name: "Invalid" } });
     await assert.rejects(

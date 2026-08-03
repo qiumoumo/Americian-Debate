@@ -1,31 +1,13 @@
 import { NextResponse } from "next/server";
-import { db } from "@debate/db";
-import { LANGUAGE_COOKIE, sanitizePreferenceUpdate } from "@/lib/language-core";
+import { LANGUAGE_COOKIE, languageSurfaceForRequest, sanitizePreferenceUpdate } from "@/lib/language-core";
 import { getAdminSession, getSession } from "@/lib/auth";
 import { jsonError, readLimitedJson } from "@/lib/api-route-utils";
 import { LANGUAGE_COOKIE_OPTIONS } from "@/lib/language-server";
-import { saveAccountLanguagePreferences } from "@/lib/language-preferences";
+import { saveAccountLanguagePreferences, saveGlobalLanguagePreference } from "@/lib/language-preferences";
 
 const MAX_BODY_BYTES = 4_000;
 
-type LanguageSurface = "user" | "admin";
-
-function requestSurface(request: Request): LanguageSurface | null {
-  const referrer = request.headers.get("referer");
-  if (!referrer) return null;
-
-  try {
-    const referrerUrl = new URL(referrer);
-    if (referrerUrl.origin !== new URL(request.url).origin) return null;
-    return referrerUrl.pathname === "/admin" || referrerUrl.pathname.startsWith("/admin/")
-      ? "admin"
-      : "user";
-  } catch {
-    return null;
-  }
-}
-
-async function accountIdForSurface(surface: LanguageSurface | null) {
+async function accountIdForSurface(surface: ReturnType<typeof languageSurfaceForRequest>) {
   if (surface === "admin") return (await getAdminSession())?.user.id ?? null;
   if (surface === "user") return (await getSession())?.user.id ?? null;
   return null;
@@ -48,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const accountId = await accountIdForSurface(requestSurface(request));
+    const accountId = await accountIdForSurface(languageSurfaceForRequest(request));
     if (body.overrides !== undefined) {
       if (!accountId) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
       await saveAccountLanguagePreferences(accountId, {
@@ -56,7 +38,7 @@ export async function POST(request: Request) {
         overrides: update.overrides ?? {}
       });
     } else if (accountId) {
-      await db.user.update({ where: { id: accountId }, data: { languageMode: update.globalMode } });
+      await saveGlobalLanguagePreference(accountId, update.globalMode);
     }
 
     const response = NextResponse.json({ ok: true });
