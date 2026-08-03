@@ -348,6 +348,8 @@ model Match {
   judge            String?
   date             DateTime          @default(now())
   tagsJson         Json
+  reportSubmittedAt DateTime?
+  reportRevision    Int               @default(0)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
@@ -363,6 +365,7 @@ model Match {
   room             MatchRoom?
 
   @@index([workspaceId, deletedAt])
+  @@index([workspaceId, reportSubmittedAt, date])
   @@index([userId])
 }
 
@@ -486,6 +489,7 @@ model MatchEvidence {
 model ArgumentOutcome {
   id         String                @id @default(cuid())
   matchId    String
+  position   Int                   @default(0)
   argument   String
   side       Side
   category   String                @default("general")
@@ -495,7 +499,7 @@ model ArgumentOutcome {
   createdAt  DateTime              @default(now())
   match      Match                 @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-  @@index([matchId])
+  @@index([matchId, position])
 }
 
 model Reflection {

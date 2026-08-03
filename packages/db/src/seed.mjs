@@ -16,6 +16,7 @@ const ADMIN_EMAIL = envOrDefault(process.env.SEED_ADMIN_EMAIL, IS_PRODUCTION ? "
 const ADMIN_NAME = envOrDefault(process.env.SEED_ADMIN_NAME, "Admin");
 const ADMIN_PASSWORD = envOrDefault(process.env.SEED_ADMIN_PASSWORD, IS_PRODUCTION ? "" : "debate-admin-2026");
 const WORKSPACE_NAME = "Debate Workspace";
+const SEED_REPORT_SUBMITTED_AT = new Date("2026-07-01T00:00:00.000Z");
 
 const sideMap = {
   Aff: "AFF",
@@ -106,6 +107,7 @@ const matches = [
     tournament: "Local Scrimmage",
     opponent: "Northview AB",
     topic: "Immigration and labor markets",
+    date: "2026-06-20T00:00:00.000Z",
     format: "PF",
     side: "Aff",
     result: "win",
@@ -121,6 +123,7 @@ const matches = [
     tournament: "Practice Round",
     opponent: "East Prep",
     topic: "AI regulation",
+    date: "2026-06-28T00:00:00.000Z",
     format: "LD",
     side: "Neg",
     result: "loss",
@@ -274,9 +277,12 @@ async function main() {
         tournament: match.tournament,
         opponent: match.opponent,
         topic: match.topic,
+        date: new Date(match.date),
         format: formatMap[match.format],
         side: sideMap[match.side],
         result: resultMap[match.result],
+        reportSubmittedAt: SEED_REPORT_SUBMITTED_AT,
+        reportRevision: 1,
         tagsJson: match.tags,
         deletedAt: null
       },
@@ -287,9 +293,12 @@ async function main() {
         tournament: match.tournament,
         opponent: match.opponent,
         topic: match.topic,
+        date: new Date(match.date),
         format: formatMap[match.format],
         side: sideMap[match.side],
         result: resultMap[match.result],
+        reportSubmittedAt: SEED_REPORT_SUBMITTED_AT,
+        reportRevision: 1,
         tagsJson: match.tags
       }
     });
@@ -322,10 +331,11 @@ async function main() {
     }
 
     await prisma.argumentOutcome.deleteMany({ where: { matchId: match.id } });
-    for (const outcome of match.argumentOutcomes) {
+    for (const [position, outcome] of match.argumentOutcomes.entries()) {
       await prisma.argumentOutcome.create({
         data: {
           matchId: match.id,
+          position,
           argument: outcome.argument,
           side: sideMap[outcome.side],
           outcome: outcomeMap[outcome.outcome]
