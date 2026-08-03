@@ -317,18 +317,29 @@ function Test-NodeOutboundHttps {
   param([string]$NodePath, [string]$EnvPath)
   Write-Step "Checking Node.js outbound HTTPS for AI model discovery"
   $provider = Get-EnvValue $EnvPath "AI_PROVIDER"
-  $baseUrl = switch ($provider) {
-    "openai-compatible" { Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_BASE_URL" }
-    "openclaw" { Get-EnvValue $EnvPath "OPENCLAW_BASE_URL" }
-    "anthropic" { "https://api.anthropic.com/v1" }
-    default { "" }
+  $providerConfig = switch ($provider) {
+    "openai-compatible" {
+      [PSCustomObject]@{
+        BaseUrl = Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_BASE_URL"
+        ApiKey = Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_API_KEY"
+      }
+    }
+    "openclaw" {
+      [PSCustomObject]@{
+        BaseUrl = Get-EnvValue $EnvPath "OPENCLAW_BASE_URL"
+        ApiKey = Get-EnvValue $EnvPath "OPENCLAW_API_KEY"
+      }
+    }
+    "anthropic" {
+      [PSCustomObject]@{
+        BaseUrl = "https://api.anthropic.com/v1"
+        ApiKey = Get-EnvValue $EnvPath "ANTHROPIC_API_KEY"
+      }
+    }
+    default { [PSCustomObject]@{ BaseUrl = ""; ApiKey = "" } }
   }
-  $apiKey = switch ($provider) {
-    "openai-compatible" { Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_API_KEY" }
-    "openclaw" { Get-EnvValue $EnvPath "OPENCLAW_API_KEY" }
-    "anthropic" { Get-EnvValue $EnvPath "ANTHROPIC_API_KEY" }
-    default { "" }
-  }
+  $baseUrl = $providerConfig.BaseUrl
+  $apiKey = $providerConfig.ApiKey
   $probeVariables = @("AI_PROBE_PROVIDER", "AI_PROBE_BASE_URL", "AI_PROBE_API_KEY", "HTTPS_PROXY", "NO_PROXY")
   $previousValues = @{}
   foreach ($name in $probeVariables) {
