@@ -24,6 +24,19 @@ provider is configured.
 
 ## Quick Start
 
+### Windows one-click setup
+
+On Windows, double-click `一键启动.cmd` in the project root. The launcher:
+
+- detects Node.js 22 or newer and, when it is missing or too old, downloads the latest Node.js 22 LTS MSI from `nodejs.org`, verifies its SHA-256 checksum, and starts the official installer;
+- creates or safely updates `.env.local`, generates local secrets, enables server-side AI model discovery, and preserves any existing provider URLs and API keys;
+- installs the pinned pnpm version and dependencies, initializes and seeds SQLite, runs data backfills, and builds the production app;
+- checks that Node.js can make outbound HTTPS requests, starts the app, waits until it is ready, and opens `http://127.0.0.1:3000` in the default browser.
+
+The generated owner email and password are shown in the launcher window and stored in the ignored `.env.local` file. Closing the launcher window stops the local server. Re-running the file is safe: database operations are idempotent and local AI credentials are not replaced.
+
+If automatic Node.js installation cannot run, the launcher displays the official download URL and keeps the error window open. Error summaries are saved to the ignored `.one-click-setup.log` file; credentials are never written to that log.
+
 Use Node.js 22 LTS for the smoothest local setup. From a fresh clone or a
 downloaded ZIP, first make sure you are in the folder that contains
 `package.json`, `pnpm-workspace.yaml`, `apps/`, `packages/`, and `prisma/`.
