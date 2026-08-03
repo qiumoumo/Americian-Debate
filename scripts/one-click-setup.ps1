@@ -65,17 +65,24 @@ function Refresh-ProcessPath {
 function Get-NodeVersion {
   param([string]$NodePath)
   $version = (& $NodePath -p "process.versions.node").Trim()
-  if ($LASTEXITCODE -ne 0 -or $version -notmatch "^(\d+)\.") {
+  if ($LASTEXITCODE -ne 0 -or $version -notmatch "^(\d+)\.(\d+)\.(\d+)") {
     throw "The installed Node.js version could not be read."
   }
   return [PSCustomObject]@{
     Text = $version
     Major = [int]$Matches[1]
+    Minor = [int]$Matches[2]
+    Patch = [int]$Matches[3]
   }
 }
 
+function Test-NodeVersionSupported {
+  param($Version)
+  return ($Version.Major -eq 22 -and $Version.Minor -ge 21) -or $Version.Major -ge 24
+}
+
 function Install-Node22 {
-  Write-Step "Node.js 22+ was not found; downloading the latest Node.js 22 LTS installer"
+  Write-Step "Node.js 22.21+ or 24+ was not found; downloading the latest Node.js 22 LTS installer"
   Write-Notice "Windows may show a User Account Control prompt. Choose Yes to continue."
 
   $architecture = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x64" }
@@ -131,14 +138,14 @@ function Resolve-Node {
   $nodePath = Get-CommandPath @("node.exe", "node")
   if ($nodePath) {
     $version = Get-NodeVersion $nodePath
-    if ($version.Major -ge 22) {
+    if (Test-NodeVersionSupported $version) {
       Write-Notice "Node.js $($version.Text) detected at $nodePath"
       if ($version.Major -gt 24) {
         Write-Warning "This project is tested with Node.js 22 and 24. Node.js $($version.Text) may not be compatible."
       }
       return $nodePath
     }
-    Write-Notice "Node.js $($version.Text) is too old for this project."
+    Write-Notice "Node.js $($version.Text) does not support this project's AI proxy path; Node.js 22.21+ or 24+ is required."
   }
 
   Install-Node22
@@ -155,8 +162,8 @@ function Resolve-Node {
   }
 
   $version = Get-NodeVersion $nodePath
-  if ($version.Major -lt 22) {
-    throw "Node.js 22+ is required, but version $($version.Text) is active."
+  if (-not (Test-NodeVersionSupported $version)) {
+    throw "Node.js 22.21+ or 24+ is required, but version $($version.Text) is active."
   }
   Write-Notice "Node.js $($version.Text) is ready."
   return $nodePath
@@ -294,21 +301,114 @@ function Test-DebateAppRunning {
   }
 }
 
+function Open-RunningAppOrAssertPortAvailable {
+  if (Test-DebateAppRunning) {
+    Write-Notice "American Debate is already running; opening it in the browser."
+    Start-Process $script:AppUrl
+    return $true
+  }
+  if (Test-TcpPort "127.0.0.1" 3000) {
+    throw "Port 3000 is already used by another program. Close that program, then run this file again."
+  }
+  return $false
+}
+
 function Test-NodeOutboundHttps {
-  param([string]$NodePath)
+  param([string]$NodePath, [string]$EnvPath)
   Write-Step "Checking Node.js outbound HTTPS for AI model discovery"
+  $provider = Get-EnvValue $EnvPath "AI_PROVIDER"
+  $baseUrl = switch ($provider) {
+    "openai-compatible" { Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_BASE_URL" }
+    "openclaw" { Get-EnvValue $EnvPath "OPENCLAW_BASE_URL" }
+    "anthropic" { "https://api.anthropic.com/v1" }
+    default { "" }
+  }
+  $apiKey = switch ($provider) {
+    "openai-compatible" { Get-EnvValue $EnvPath "OPENAI_COMPATIBLE_API_KEY" }
+    "openclaw" { Get-EnvValue $EnvPath "OPENCLAW_API_KEY" }
+    "anthropic" { Get-EnvValue $EnvPath "ANTHROPIC_API_KEY" }
+    default { "" }
+  }
+  $probeVariables = @("AI_PROBE_PROVIDER", "AI_PROBE_BASE_URL", "AI_PROBE_API_KEY", "HTTPS_PROXY", "NO_PROXY")
+  $previousValues = @{}
+  foreach ($name in $probeVariables) {
+    $previousValues[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+  }
+  $env:AI_PROBE_PROVIDER = $provider
+  $env:AI_PROBE_BASE_URL = $baseUrl
+  $env:AI_PROBE_API_KEY = $apiKey
+  $configuredProxy = Get-EnvValue $EnvPath "HTTPS_PROXY"
+  $configuredNoProxy = Get-EnvValue $EnvPath "NO_PROXY"
+  if ($configuredProxy) { $env:HTTPS_PROXY = $configuredProxy }
+  if ($configuredNoProxy) { $env:NO_PROXY = $configuredNoProxy }
+
   $probe = @"
+const http = require('node:http');
+if (process.env.HTTPS_PROXY && typeof http.setGlobalProxyFromEnv === 'function') {
+  http.setGlobalProxyFromEnv();
+}
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), 10000);
-fetch('https://registry.npmjs.org/-/ping', { signal: controller.signal })
-  .then((response) => { clearTimeout(timer); process.exit(response.ok ? 0 : 2); })
-  .catch(() => process.exit(1));
+const provider = process.env.AI_PROBE_PROVIDER || '';
+const baseUrl = (process.env.AI_PROBE_BASE_URL || '').replace(/\/(models|chat\/completions)\/?$/i, '').replace(/\/+$/, '');
+const apiKey = process.env.AI_PROBE_API_KEY || '';
+const candidates = baseUrl
+  ? [baseUrl + '/models'].concat(/\/v\d+(?:\.\d+)?$/i.test(baseUrl) ? [] : [baseUrl + '/v1/models'])
+  : ['https://registry.npmjs.org/-/ping'];
+const headers = provider === 'anthropic'
+  ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', accept: 'application/json' }
+  : apiKey ? { Authorization: 'Bearer ' + apiKey, accept: 'application/json' } : { accept: 'application/json' };
+
+(async () => {
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, { headers, signal: controller.signal, redirect: 'error' });
+      if (!baseUrl) {
+        console.log('PUBLIC ' + response.status);
+        process.exit(response.ok ? 0 : 2);
+      }
+      if ((response.status === 404 || response.status === 405) && url !== candidates[candidates.length - 1]) continue;
+      if (!response.ok) {
+        console.log('MODELS ' + response.status + ' ' + url);
+        process.exit(3);
+      }
+      const payload = await response.json().catch(() => null);
+      const rows = Array.isArray(payload) ? payload : Array.isArray(payload && payload.data) ? payload.data : Array.isArray(payload && payload.models) ? payload.models : [];
+      console.log('MODELS ' + response.status + ' ' + rows.length + ' ' + url);
+      process.exit(rows.length ? 0 : 4);
+    } catch (error) {
+      if (url === candidates[candidates.length - 1]) {
+        console.log('NETWORK ' + (error && error.name ? error.name : 'Error') + ' ' + url);
+        process.exit(1);
+      }
+    }
+  }
+  process.exit(1);
+})().finally(() => clearTimeout(timer));
 "@
-  & $NodePath -e $probe
-  if ($LASTEXITCODE -eq 0) {
-    Write-Notice "Node.js can access public HTTPS endpoints."
+  $probeOutput = @()
+  $probeExitCode = 1
+  try {
+    $probeOutput = & $NodePath -e $probe 2>&1
+    $probeExitCode = $LASTEXITCODE
+  } finally {
+    foreach ($name in $probeVariables) {
+      if ($null -eq $previousValues[$name]) {
+        Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
+      } else {
+        Set-Item -Path "Env:$name" -Value $previousValues[$name]
+      }
+    }
+  }
+  $probeSummary = ($probeOutput | ForEach-Object { $_.ToString() }) -join " "
+  if ($probeExitCode -eq 0 -and $baseUrl) {
+    Write-Notice "The configured AI model endpoint responded successfully: $probeSummary"
+  } elseif ($probeExitCode -eq 0) {
+    Write-Notice "Node.js can access public HTTPS. A real /models request will run after an AI provider is configured."
+  } elseif ($probeExitCode -in @(3, 4)) {
+    Write-Warning "The configured AI host is reachable, but model detection did not return a usable list ($probeSummary). Check the Base URL and API key."
   } else {
-    Write-Warning "Node.js outbound HTTPS is blocked. Setup can continue, but AI model detection may fail. Allow Node.js outbound TCP 443 or configure HTTPS_PROXY in .env.local."
+    Write-Warning "Node.js could not reach the AI/public HTTPS probe ($probeSummary). Setup can continue, but AI model detection may fail. Allow Node.js outbound TCP 443 or configure HTTPS_PROXY in .env.local."
   }
 }
 
@@ -327,14 +427,7 @@ function Show-LoginDetails {
 
 function Start-DebateApp {
   param([string]$CorepackPath, [string]$EnvPath)
-  if (Test-DebateAppRunning) {
-    Write-Notice "American Debate is already running; opening it in the browser."
-    Start-Process $script:AppUrl
-    return
-  }
-  if (Test-TcpPort "127.0.0.1" 3000) {
-    throw "Port 3000 is already used by another program. Close that program, then run this file again."
-  }
+  if (Open-RunningAppOrAssertPortAvailable) { return }
 
   Show-LoginDetails $EnvPath
   $watcherPath = Join-Path $PSScriptRoot "open-when-ready.ps1"
@@ -362,14 +455,7 @@ function Main {
     return
   }
 
-  if (Test-DebateAppRunning) {
-    Write-Notice "American Debate is already running; opening it in the browser."
-    Start-Process $script:AppUrl
-    return
-  }
-  if (Test-TcpPort "127.0.0.1" 3000) {
-    throw "Port 3000 is already used by another program. Close that program, then run this file again."
-  }
+  if (Open-RunningAppOrAssertPortAvailable) { return }
 
   $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
   Invoke-Checked "Activating pnpm 9.15.0" $corepackPath @("prepare", "pnpm@9.15.0", "--activate")
@@ -381,7 +467,7 @@ function Main {
   Invoke-Checked "Updating saved AI configuration data" $corepackPath @("pnpm", "--filter", "@debate/db", "ai:backfill")
   Invoke-Checked "Updating match report data" $corepackPath @("pnpm", "--filter", "@debate/db", "reports:backfill")
   Invoke-Checked "Updating room data" $corepackPath @("pnpm", "--filter", "@debate/db", "rooms:backfill")
-  Test-NodeOutboundHttps $nodePath
+  Test-NodeOutboundHttps $nodePath $envPath
   Invoke-Checked "Building the production application" $corepackPath @("pnpm", "--filter", "@debate/web", "build")
 
   if ($SetupOnly) {

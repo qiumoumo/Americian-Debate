@@ -28,10 +28,10 @@ provider is configured.
 
 On Windows, double-click `一键启动.cmd` in the project root. The launcher:
 
-- detects Node.js 22 or newer and, when it is missing or too old, downloads the latest Node.js 22 LTS MSI from `nodejs.org`, verifies its SHA-256 checksum, and starts the official installer;
+- detects Node.js 22.21+ or 24+ and, when the installed runtime is incompatible, downloads the latest Node.js 22 LTS MSI from `nodejs.org`, verifies its SHA-256 checksum, and starts the official installer;
 - creates or safely updates `.env.local`, generates local secrets, enables server-side AI model discovery, and preserves any existing provider URLs and API keys;
 - installs the pinned pnpm version and dependencies, initializes and seeds SQLite, runs data backfills, and builds the production app;
-- checks that Node.js can make outbound HTTPS requests, starts the app, waits until it is ready, and opens `http://127.0.0.1:3000` in the default browser.
+- checks Node.js outbound HTTPS using the configured proxy and, when an environment-based AI provider already exists, makes a real non-billing `/models` request; it then starts the app, waits until it is ready, and opens `http://127.0.0.1:3000` in the default browser.
 
 The generated owner email and password are shown in the launcher window and stored in the ignored `.env.local` file. Closing the launcher window stops the local server. Re-running the file is safe: database operations are idempotent and local AI credentials are not replaced.
 
