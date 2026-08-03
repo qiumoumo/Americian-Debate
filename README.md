@@ -6,6 +6,16 @@ This repository contains a full-stack debate training and team workspace. It is 
 SQLite stores local data, AI provider keys stay server-side, and generated prompts can be copied manually when no paid
 provider is configured.
 
+## Windows 一键使用
+
+Windows 用户无需手动输入安装命令：下载并解压完整项目后，直接双击项目根目录中的 **`一键启动.cmd`** 即可。
+
+首次运行会自动检测兼容的 Node.js、安装项目依赖、生成本地安全配置、初始化数据库、开启 AI 模型发现、构建并启动应用；服务就绪后会自动打开浏览器。以后再次使用时仍然双击同一个文件，已有账号、数据以及 AI Provider 配置都会保留。
+
+如果电脑缺少兼容的 Node.js，启动器会从 Node.js 官方网站下载并校验安装程序，Windows 可能会显示一次用户账户控制确认。遇到网络、代理或端口问题时，窗口会保留明确的处理提示。
+
+> 偏好手动部署或需要自定义服务器配置的用户，可以继续使用下方原有的 **Quick Start**、**AI Configuration** 和 **Troubleshooting** 说明。
+
 ## Highlights
 
 - Debate workspace for documents, evidence, match preparation, practice rounds, and team administration.
@@ -23,6 +33,19 @@ provider is configured.
 - `prisma/schema.prisma`: SQLite-first schema, designed to migrate to Postgres later.
 
 ## Quick Start
+
+### Windows one-click setup
+
+On Windows, double-click `一键启动.cmd` in the project root. The launcher:
+
+- detects Node.js 22.21+ or 24+ and, when the installed runtime is incompatible, downloads the latest Node.js 22 LTS MSI from `nodejs.org`, verifies its SHA-256 checksum, and starts the official installer;
+- creates or safely updates `.env.local`, generates local secrets, enables server-side AI model discovery, and preserves any existing provider URLs and API keys;
+- installs the pinned pnpm version and dependencies, initializes and seeds SQLite, runs data backfills, and builds the production app;
+- checks Node.js outbound HTTPS using the configured proxy and, when an environment-based AI provider already exists, makes a real non-billing `/models` request; it then starts the app, waits until it is ready, and opens `http://127.0.0.1:3000` in the default browser.
+
+The generated owner email and password are shown in the launcher window and stored in the ignored `.env.local` file. Closing the launcher window stops the local server. Re-running the file is safe: database operations are idempotent and local AI credentials are not replaced.
+
+If automatic Node.js installation cannot run, the launcher displays the official download URL and keeps the error window open. Error summaries are saved to the ignored `.one-click-setup.log` file; credentials are never written to that log.
 
 Use Node.js 22 LTS for the smoothest local setup. From a fresh clone or a
 downloaded ZIP, first make sure you are in the folder that contains
