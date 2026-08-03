@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { AppShell } from "@/components/app-shell";
 import { formatOptions } from "@debate/shared";
 import { AIDraftPanel } from "@/components/ai-draft-panel";
@@ -54,20 +54,20 @@ export default async function MatchesPage({
         note="比赛室：计时器、speech notes、AI 草稿、证据关联和 Live Flow 都绑定这一场比赛。"
       >
         <div className="practice-back-row">
-          <Link className="button ghost" href="/app/matches">← 返回比赛列表</Link>
+          <ReliableLink className="button ghost" href="/app/matches">← 返回比赛列表</ReliableLink>
         </div>
 
         <section className="hero">
           <div className="eyebrow">Match Room</div>
-          <h1>{selectedMatch.tournament} vs {selectedMatch.opponent}</h1>
-          <p>{selectedMatch.topic}</p>
+          <h1 data-language-raw>{selectedMatch.tournament} vs {selectedMatch.opponent}</h1>
+          <p data-language-raw>{selectedMatch.topic}</p>
           <div className="actions match-room-report-entry">
             <span className={`report-status ${report.reportSubmittedAt ? "submitted" : "pending"}`}>
               {report.reportSubmittedAt ? `赛后报告 · 第 ${report.reportRevision} 版` : "赛后报告待填写"}
             </span>
-            <Link className="button primary" href={`/app/history?match=${selectedMatch.id}`}>
+            <ReliableLink className="button primary" href={`/app/history?match=${selectedMatch.id}`}>
               {report.reportSubmittedAt ? (report.canEdit ? "查看 / 修订赛后数据" : "查看赛后数据") : (report.canEdit ? "填写赛后数据" : "查看赛后数据")}
-            </Link>
+            </ReliableLink>
           </div>
         </section>
 
@@ -76,7 +76,7 @@ export default async function MatchesPage({
           {room.ownerId === session.user.id || session.user.isSystemAdmin ? (
             <div className="room-management">
               <div className="actions">
-                <span className="pill">房主：{room.owner.name}</span>
+                <span className="pill">房主：<span data-language-raw>{room.owner.name}</span></span>
                 <form action={rotateMatchRoomCode}>
                   <input type="hidden" name="matchId" value={selectedMatch.id} />
                   <button className="button" type="submit">更换邀请码</button>
@@ -85,7 +85,7 @@ export default async function MatchesPage({
               <div className="table-like">
                 {room.members.map((member) => (
                   <div className="table-row" key={member.id}>
-                    <div><strong>{member.user.name}</strong><br /><small>{member.user.email}</small></div>
+                    <div data-language-raw><strong>{member.user.name}</strong><br /><small>{member.user.email}</small></div>
                     <div><span className="pill">{member.status === "ACTIVE" ? "可访问" : "已移出"}</span></div>
                     <div className="actions">
                       {member.userId !== room.ownerId ? (
@@ -114,7 +114,7 @@ export default async function MatchesPage({
         <div style={{ height: 18 }} />
 
         <div className="grid two">
-          <SectionCard title="比赛笔记" description={`${selectedMatch.tournament} vs ${selectedMatch.opponent}`}>
+          <SectionCard title="比赛笔记" description={`${selectedMatch.tournament} vs ${selectedMatch.opponent}`} descriptionIsRaw>
             <SharedSpeechNotes notes={selectedMatch.speechNotes} />
             {selectedMatch.notes.length ? (
               <div className="timeline spaced">
@@ -231,13 +231,13 @@ export default async function MatchesPage({
           {rooms.map((room) => (
             <article className="timeline-item" key={room.id}>
               <div className="actions">
-                <strong>{room.match.tournament} vs {room.match.opponent}</strong>
+                <strong data-language-raw>{room.match.tournament} vs {room.match.opponent}</strong>
                 <span className="pill">{mapPrismaFormat(room.match.format)}</span>
-                <span className="pill">房主：{room.owner.name}</span>
+                <span className="pill">房主：<span data-language-raw>{room.owner.name}</span></span>
               </div>
-              <p>{room.match.topic}</p>
+              <p data-language-raw>{room.match.topic}</p>
               <div className="actions">
-                <Link className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</Link>
+                <ReliableLink className="button primary" href={`/app/matches?match=${room.match.id}`}>进入比赛房间</ReliableLink>
                 <span className="pill">邀请码 {room.inviteCode}</span>
               </div>
             </article>

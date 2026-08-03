@@ -62,7 +62,7 @@ function actionMessage(code: MatchReportActionCode | undefined) {
   if (code === "NOT_FOUND") return "未找到这场比赛，记录可能已被删除。";
   if (code === "FORBIDDEN") return "你没有权限修改这份赛后报告。";
   if (code === "VALIDATION_FAILED") return "部分比赛数据不完整或格式不正确，请检查后重试。";
-  if (code === "REVISION_CONFLICT") return "报告已被其他成员修改。当前输入仍保留，请重新加载服务器版本后再合并。";
+  if (code === "REVISION_CONFLICT") return "报告已被其他成员修改。当前页输入仍保留，请在新标签页查看服务器版本后手动合并。";
   return "保存失败，请稍后重试。";
 }
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { userNavigation } from "@/lib/navigation";
 import { ReliableLink } from "@/components/reliable-link";
 
@@ -17,15 +16,15 @@ export function ClientShell({ activeHref, children, user }: ClientShellProps) {
   return (
     <div className="page-shell">
       <aside className="sidebar">
-        <Link href="/" className="brand" aria-label="Debate Suite home">
+        <ReliableLink href="/" className="brand" aria-label="Debate Suite home">
           <span className="brand-mark">DS</span>
           <span>
             <strong className="brand-title">Debate Suite</strong>
           </span>
-        </Link>
+        </ReliableLink>
         {user ? (
           <div className="user-card">
-            <strong>{user.name}</strong>
+            <strong data-language-raw>{user.name}</strong>
             <span>{user.email}</span>
             <span className="pill">{user.role}</span>
             <small>{user.workspaceName}</small>

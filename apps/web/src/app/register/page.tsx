@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db } from "@debate/db";
-import { SectionCard } from "@/components/section-card";
-import { MIN_PASSWORD_LENGTH } from "@/lib/auth";
+import { AuthShell } from "@/components/auth-shell";
+import { getSession, MIN_PASSWORD_LENGTH } from "@/lib/auth";
+import { pathWithAuthTarget, sanitizeInternalRedirectTarget } from "@/lib/auth-redirect";
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid: "请填写姓名、有效邮箱。",
@@ -14,9 +16,13 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function RegisterPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; invite?: string }>;
+  searchParams: Promise<{ error?: string; invite?: string; target?: string }>;
 }) {
-  const { error, invite } = await searchParams;
+  const { error, invite, target: requestedTarget } = await searchParams;
+  const target = sanitizeInternalRedirectTarget(requestedTarget);
+  const session = await getSession();
+  if (session?.user.mustChangePassword) redirect("/app/change-password");
+  if (session) redirect(target);
   const message = error ? ERROR_MESSAGES[error] ?? "注册失败，请重试。" : null;
 
   // If arriving from an invite link, resolve it to prefill the email and show context.
@@ -27,49 +33,47 @@ export default async function RegisterPage({
     invitation && !invitation.acceptedAt && invitation.expiresAt.getTime() > Date.now() ? invitation : null;
 
   return (
-    <main className="login-shell">
-      <section className="hero login-hero">
-        <div className="eyebrow">注册</div>
-        <h1>创建账号</h1>
-        <p>
-          {validInvite
-            ? `你被邀请加入「${validInvite.workspace.name}」，角色 ${validInvite.role}。`
-            : "注册后自动创建你自己的工作区，可直接进入用户端。"}
-        </p>
-      </section>
-
-      <div className="grid">
-        <SectionCard title="新账号" description="邮箱将作为登录账号。">
-          <form action="/api/auth/register" method="post" className="stack">
-            {message ? <p className="empty-state">{message}</p> : null}
-            {invite && !validInvite ? <p className="empty-state">邀请链接无效或已过期。</p> : null}
-            {validInvite ? <input type="hidden" name="invite" value={invite} /> : null}
-            <label className="field">
-              <span>姓名</span>
-              <input name="name" type="text" autoComplete="name" required />
-            </label>
-            <label className="field">
-              <span>邮箱</span>
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                defaultValue={validInvite?.email ?? ""}
-                readOnly={Boolean(validInvite)}
-                required
-              />
-            </label>
-            <label className="field">
-              <span>密码（至少 {MIN_PASSWORD_LENGTH} 位）</span>
-              <input name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required />
-            </label>
-            <button className="button primary" type="submit">注册并进入</button>
-          </form>
-          <p className="small-note">
-            已有账号？<Link href="/login">去登录</Link>
-          </p>
-        </SectionCard>
+    <AuthShell
+      eyebrow="创建账号"
+      title={validInvite ? `加入「${validInvite.workspace.name}」` : "建立你的辩论工作区"}
+      description={validInvite
+        ? `你将以 ${validInvite.role} 身份加入团队，注册后即可继续。`
+        : "注册后自动创建个人工作区，马上开始整理资料和训练。"}
+    >
+      <div className="auth-panel-heading">
+        <h2>新账号</h2>
+        <p>邮箱将作为登录账号。</p>
       </div>
-    </main>
+      <form action="/api/auth/register" method="post" className="stack">
+        <input type="hidden" name="target" value={target} />
+        {message ? <p className="form-message error-text" role="alert">{message}</p> : null}
+        {invite && !validInvite ? <p className="form-message error-text" role="alert">邀请链接无效或已过期。</p> : null}
+        {validInvite ? <input type="hidden" name="invite" value={invite} /> : null}
+        <label className="field">
+          <span>姓名</span>
+          <input name="name" type="text" autoComplete="name" placeholder="你的姓名" required />
+        </label>
+        <label className="field">
+          <span>邮箱</span>
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            defaultValue={validInvite?.email ?? ""}
+            placeholder="name@example.com"
+            readOnly={Boolean(validInvite)}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>密码（至少 {MIN_PASSWORD_LENGTH} 位）</span>
+          <input name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} placeholder="创建密码" required />
+        </label>
+        <button className="button primary auth-submit" type="submit">注册并进入</button>
+      </form>
+      <p className="auth-switch">
+        已有账号？<Link href={pathWithAuthTarget("/login", target)}>去登录</Link>
+      </p>
+    </AuthShell>
   );
 }

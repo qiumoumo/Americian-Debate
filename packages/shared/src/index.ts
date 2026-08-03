@@ -1,4 +1,5 @@
 export * from "./evidence.ts";
+export * from "./language.ts";
 
 export type Side = "Aff" | "Neg" | "Pro" | "Con" | "Generic";
 export type DebateFormat = "PF" | "LD" | "Policy" | "BP" | "Custom";

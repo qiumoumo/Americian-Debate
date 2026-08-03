@@ -8,6 +8,7 @@ import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, limitString, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { mapEvidence } from "@/lib/data";
 import { requireRoomAccess } from "@/lib/rooms";
+import { getEffectiveLanguageForUser } from "@/lib/language-server";
 
 const MAX_BODY_BYTES = 64_000;
 const MAX_EVIDENCE_IDS = 12;
@@ -21,6 +22,7 @@ function parseEvidenceIds(value: unknown) {
 
 export async function POST(request: Request) {
   const session = await requireUser();
+  const responseLanguage = await getEffectiveLanguageForUser(session.user.id, "matches");
 
   try {
     if (!checkRateLimit(`${session.user.id}:flow-rebuttal`, 8, 60_000)) {
@@ -79,7 +81,8 @@ export async function POST(request: Request) {
       speechType: limitString(body.speechType, 120) || "Rebuttal",
       opponentArgument,
       evidence,
-      flowContext
+      flowContext,
+      responseLanguage
     };
 
     if (body.copyPromptOnly) {

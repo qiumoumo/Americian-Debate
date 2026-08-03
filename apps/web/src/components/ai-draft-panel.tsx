@@ -136,8 +136,8 @@ export function AIDraftPanel({ matchId, side, evidence }: AIDraftPanelProps) {
               onChange={() => toggleEvidence(card.id)}
             />
             <span>
-              <strong>{card.title}</strong>
-              <small>{card.side} · {card.tags.join(", ")}</small>
+              <strong data-language-raw>{card.title}</strong>
+              <small data-language-raw>{card.side} · {card.tags.join(", ")}</small>
             </span>
           </label>
         ))}

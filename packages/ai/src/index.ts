@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { LanguageMode } from "@debate/shared";
+
+export { debateTerminology, responseLanguageInstruction, type ResponseLanguage } from "./language.ts";
 
 export type AIProviderId = "mock" | "openclaw" | "openai-compatible" | "anthropic";
 
@@ -11,6 +14,7 @@ export interface ChatMessage {
 
 export interface ChatInput {
   messages: ChatMessage[];
+  responseLanguage: LanguageMode;
   temperatureHint?: "focused" | "balanced" | "creative";
   maxOutputTokens?: number;
   timeoutMs?: number;
@@ -417,6 +421,22 @@ export class MockProvider implements AIProvider {
   id: AIProviderId = "mock";
 
   async chat(input: ChatInput): Promise<ChatResult> {
+    if (input.responseLanguage === "zh-CN") {
+      return {
+        providerId: this.id,
+        model: "mock-local",
+        text: "模拟 AI 回应：先比较双方影响，再追问论证链条。",
+        usage: { inputTokens: Math.ceil(joinMessages(input.messages).length / 4), outputTokens: 24 }
+      };
+    }
+    if (input.responseLanguage === "zh-terms-en") {
+      return {
+        providerId: this.id,
+        model: "mock-local",
+        text: "模拟 AI 回应：先做 comparative weighing，再追问 link chain。",
+        usage: { inputTokens: Math.ceil(joinMessages(input.messages).length / 4), outputTokens: 24 }
+      };
+    }
     return {
       providerId: this.id,
       model: "mock-local",
@@ -429,20 +449,23 @@ export class MockProvider implements AIProvider {
   }
 
   async generateStructured<T>(input: StructuredInput<unknown>): Promise<T> {
+    const hybrid = input.responseLanguage === "zh-terms-en";
+    const chinese = input.responseLanguage === "zh-CN" || hybrid;
+    const localized = (english: string, zh: string, mixed = zh) => chinese ? (hybrid ? mixed : zh) : english;
     if (input.schemaName === "PracticeFeedback") {
       return {
         score: 82,
-        feedback: "Mock feedback: your argument has clear clash. Add explicit weighing before the last response.",
+        feedback: localized("Mock feedback: your argument has clear clash. Add explicit weighing before the last response.", "模拟反馈：你的论点交锋清楚，请在最后回应前加入明确的权衡。", "模拟 feedback：你的论点 clash 清楚，请在最后 response 前加入明确 weighing。"),
         rubric: {
-          clash: { score: 84, comment: "Direct clash on the main link; answer their turn earlier." },
-          evidenceExtension: { score: 78, comment: "Re-explain the warrant when you extend, not just the tag." },
-          weighing: { score: 72, comment: "Add comparative weighing on timeframe before the last speech." },
-          collapse: { score: 80, comment: "Good instinct to collapse; commit to one voter sooner." },
-          lineByLineEfficiency: { score: 85, comment: "Clean line-by-line; trim the repeated overview." }
+          clash: { score: 84, comment: localized("Direct clash on the main link; answer their turn earlier.", "直接回应主要链条，并更早回答对方的打回。", "直接 clash 主要 link，并更早回答对方 turn。") },
+          evidenceExtension: { score: 78, comment: localized("Re-explain the warrant when you extend, not just the tag.", "延伸证据时应重新解释论证依据，而不只是复述标签。", "做 Evidence extension 时应重新解释 warrant，而不只是复述 tag。") },
+          weighing: { score: 72, comment: localized("Add comparative weighing on timeframe before the last speech.", "在最后发言前加入时间线上的比较性权衡。", "在最后 speech 前加入 timeframe comparative weighing。") },
+          collapse: { score: 80, comment: localized("Good instinct to collapse; commit to one voter sooner.", "收束方向正确，但应更早集中到一个投票点。", "Collapse 方向正确，但应更早集中到一个 voter。") },
+          lineByLineEfficiency: { score: 85, comment: localized("Clean line-by-line; trim the repeated overview.", "逐条回应清楚，应删减重复概述。", "Line-by-line 清楚，应删减重复 overview。") }
         },
-        strengths: ["Clear claim", "Good evidence framing"],
-        weaknesses: ["Needs comparative weighing", "Frontline should be shorter"],
-        nextDrills: ["30-second weighing drill", "One-card extension drill"]
+        strengths: [localized("Clear claim", "主张清楚"), localized("Good evidence framing", "证据框架良好", "Evidence framing 良好")],
+        weaknesses: [localized("Needs comparative weighing", "需要比较性权衡", "需要 comparative weighing"), localized("Frontline should be shorter", "一线回应应更短", "Frontline 应更短")],
+        nextDrills: [localized("30-second weighing drill", "30 秒权衡训练", "30-second weighing drill"), localized("One-card extension drill", "单卡证据延伸训练", "One-card extension drill")]
       } as T;
     }
 
@@ -450,25 +473,25 @@ export class MockProvider implements AIProvider {
       return {
         drills: [
           {
-            title: "30-second weighing drill",
-            instructions: "In 30 seconds, weigh your best impact against the opponent's on magnitude, probability, and timeframe.",
+            title: localized("30-second weighing drill", "30 秒权衡训练", "30-second weighing drill"),
+            instructions: localized("In 30 seconds, weigh your best impact against the opponent's on magnitude, probability, and timeframe.", "在 30 秒内，从规模、概率和时间线上比较你与对手最强的影响。", "在 30 秒内，从 magnitude、probability 和 timeframe 比较双方最强 impact。"),
             targetDimension: "weighing",
             durationSeconds: 30,
-            promptText: "Weigh your strongest impact against their strongest impact. Be explicitly comparative."
+            promptText: localized("Weigh your strongest impact against their strongest impact. Be explicitly comparative.", "将你最强的影响与对方最强的影响进行明确比较。", "对双方最强 impact 做明确 comparative weighing。")
           },
           {
-            title: "Answer this turn",
-            instructions: "The opponent has turned your case. Answer the turn cleanly in one response, then extend your offense.",
+            title: localized("Answer this turn", "回应这条打回", "Answer this turn"),
+            instructions: localized("The opponent has turned your case. Answer the turn cleanly in one response, then extend your offense.", "对手打回了你的立论。用一条清晰回应化解，然后延伸进攻。", "对手 turn 了你的 case。用一条清晰 response 化解，然后 extend offense。"),
             targetDimension: "clash",
             durationSeconds: 45,
-            promptText: "They read a link turn on your advantage. Answer it and explain why your offense still outweighs."
+            promptText: localized("They read a link turn on your advantage. Answer it and explain why your offense still outweighs.", "对方对你的优势提出链条打回。回应它并解释为何你的进攻仍然更重要。", "对方对你的 advantage 提出 link turn。回答并解释为何你的 offense 仍然 outweighs。")
           },
           {
-            title: "Collapse to one voter",
-            instructions: "Collapse the round to a single voting issue and rebuild weighing around it.",
+            title: localized("Collapse to one voter", "收束到一个投票点", "Collapse to one voter"),
+            instructions: localized("Collapse the round to a single voting issue and rebuild weighing around it.", "将本轮收束到一个投票议题，并围绕它重建权衡。", "将 Round collapse 到一个 voting issue，并围绕它重建 weighing。"),
             targetDimension: "collapse",
             durationSeconds: 60,
-            promptText: "Pick the one argument you are winning and write a final-focus-style collapse around it."
+            promptText: localized("Pick the one argument you are winning and write a final-focus-style collapse around it.", "选择你正在赢得的一条论点，围绕它写一段终局聚焦式收束。", "选择你正在赢得的一条 argument，围绕它写 final-focus-style collapse。")
           }
         ]
       } as T;
@@ -478,35 +501,35 @@ export class MockProvider implements AIProvider {
       return {
         responses: [
           {
-            label: "No link",
+            label: localized("No link", "无链条", "No link"),
             category: "answer",
-            response: "Their evidence is about a different mechanism; deny the internal link before it becomes offense.",
+            response: localized("Their evidence is about a different mechanism; deny the internal link before it becomes offense.", "对方证据讨论的是另一种机制；应先否定内部链条，避免它形成进攻。", "对方 Evidence 讨论的是另一种机制；先否定 internal link，避免形成 offense。"),
             strategy: "delink",
             evidenceIds: []
           },
           {
-            label: "Turn the impact",
+            label: localized("Turn the impact", "打回影响", "Turn the impact"),
             category: "turn",
-            response: "Concede their link but weigh long-run productivity; the turn outweighs on magnitude and timeframe.",
-            strategy: "impact turn",
+            response: localized("Concede their link but weigh long-run productivity; the turn outweighs on magnitude and timeframe.", "承认对方链条但比较长期生产率；该打回在规模和时间线上更重要。", "Concede 对方 link，但 weigh 长期生产率；该 turn 在 magnitude 和 timeframe 上 outweighs。"),
+            strategy: localized("impact turn", "影响打回", "impact turn"),
             evidenceIds: []
           },
           {
-            label: "Weigh timeframe",
+            label: localized("Weigh timeframe", "比较时间线", "Weigh timeframe"),
             category: "weigh",
-            response: "Even if the link is true, our benefit compounds while their harm is short-run — timeframe comes first.",
-            strategy: "comparative weighing",
+            response: localized("Even if the link is true, our benefit compounds while their harm is short-run — timeframe comes first.", "即使链条成立，我方收益会累积而对方伤害仅是短期，因此时间线优先。", "即使 link 成立，我方 benefit 会累积而对方 harm 仅是短期，因此 timeframe 优先。"),
+            strategy: localized("comparative weighing", "比较性权衡", "comparative weighing"),
             evidenceIds: []
           },
           {
-            label: "Collapse here",
+            label: localized("Collapse here", "在此收束", "Collapse here"),
             category: "collapse",
-            response: "In the last speech, go for the turn only and extend it clean; drop the smaller answers.",
-            strategy: "collapse + extend",
+            response: localized("In the last speech, go for the turn only and extend it clean; drop the smaller answers.", "最后发言只推进该打回并清晰延伸，放弃较小回应。", "最后 speech 只推进该 turn 并 cleanly extend，drop 较小 answers。"),
+            strategy: localized("collapse + extend", "收束并延伸", "collapse + extend"),
             evidenceIds: []
           }
         ],
-        weighing: ["Weigh on timeframe: their harm is short-run, our benefit compounds."]
+        weighing: [localized("Weigh on timeframe: their harm is short-run, our benefit compounds.", "按时间线权衡：对方伤害是短期的，而我方收益会累积。", "按 timeframe weighing：对方 harm 是短期的，而我方 benefit 会累积。")]
       } as T;
     }
 
@@ -514,19 +537,19 @@ export class MockProvider implements AIProvider {
       ourCase: [
         {
           speech: "Constructive",
-          argument: "Use the selected evidence as offense, then collapse to one clean weighing story.",
+          argument: localized("Use the selected evidence as offense, then collapse to one clean weighing story.", "将所选证据作为进攻，然后收束到一条清晰的权衡叙事。", "将所选 Evidence 作为 offense，然后 collapse 到一条清晰 weighing story。"),
           evidenceIds: ["ev-labor-01"],
-          suggestedText: "Extend labor complementarity and compare it against their fiscal-cost framing."
+          suggestedText: localized("Extend labor complementarity and compare it against their fiscal-cost framing.", "延伸劳动力互补性，并与对方的财政成本框架比较。", "Extend 劳动力互补性，并与对方 fiscal-cost framework 比较。")
         }
       ],
       frontlines: [
         {
-          opponentArgument: "Fiscal pressure outweighs growth",
-          response: "Concede short-run costs but weigh long-run productivity and tax-base growth.",
+          opponentArgument: localized("Fiscal pressure outweighs growth", "财政压力比增长更重要", "Fiscal pressure outweighs growth"),
+          response: localized("Concede short-run costs but weigh long-run productivity and tax-base growth.", "承认短期成本，但应权衡长期生产率与税基增长。", "Concede 短期成本，但 weigh 长期生产率与税基增长。"),
           evidenceIds: ["ev-fiscal-02"]
         }
       ],
-      risks: ["Replace this mock output with a real provider before relying on it in round."]
+      risks: [localized("Replace this mock output with a real provider before relying on it in round.", "在正式比赛中采用前，请将模拟输出替换为真实模型。", "在 Round 中采用前，请将 mock output 替换为真实 provider。")]
     } as T;
   }
 

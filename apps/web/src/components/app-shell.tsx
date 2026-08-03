@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { userNavigation } from "@/lib/navigation";
 import { PresenceAgent } from "@/components/presence-agent";
 import { ReliableLink } from "@/components/reliable-link";
@@ -22,16 +21,16 @@ export function AppShell({ activeHref, children, note, user }: AppShellProps) {
     <div className="page-shell">
       {user ? <PresenceAgent /> : null}
       <aside className="sidebar">
-        <Link href="/" className="brand" aria-label="美辩 home">
+        <ReliableLink href="/" className="brand" aria-label="美辩 home">
           <span className="brand-mark">美</span>
           <span>
             <strong className="brand-title">美辩</strong>
             <p className="brand-subtitle">本地优先辩论工作台</p>
           </span>
-        </Link>
+        </ReliableLink>
         {user ? (
           <div className="user-card">
-            <strong>{user.name}</strong>
+            <strong data-language-raw>{user.name}</strong>
             <span>{user.email}</span>
             <span className="pill">{user.role}</span>
             <small>{user.workspaceName}</small>

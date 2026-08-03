@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import type { MatchResult, Side } from "@debate/shared";
 import { AppShell } from "@/components/app-shell";
 import { MatchOutcomeDistribution } from "@/components/match-outcome-distribution";
@@ -93,18 +93,18 @@ function selectionErrorMessage(error: unknown) {
 
 function HistoryRow({ item, active, href }: { item: MatchHistoryItem; active: boolean; href: string }) {
   return (
-    <Link className="history-record-row" data-active={active} href={href}>
-      <div className="history-record-head">
+    <ReliableLink className="history-record-row" data-active={active} href={href}>
+      <div className="history-record-head" data-language-raw>
         <strong>{item.tournament} vs {item.opponent}</strong>
         <span className={`result-badge ${item.result}`}>{resultLabel(item.result)}</span>
       </div>
-      <p>{item.topic}</p>
+      <p data-language-raw>{item.topic}</p>
       <div className="history-record-meta">
         <time dateTime={item.date}>{dateLabel(item.date)}</time>
         <span>{item.format} · {item.side}</span>
         <span>{item.argumentOutcomeCount} 论点 · {item.evidenceCount} evidence</span>
       </div>
-    </Link>
+    </ReliableLink>
   );
 }
 
@@ -162,8 +162,8 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         <h1>赛事记录与复盘</h1>
         <p>集中查看赛后数据、论点结果、evidence 表现与训练复盘。</p>
         <div className="actions">
-          {canCreate ? <Link className="button primary" href={selectionHref(params, { isNew: true })}>补录比赛</Link> : null}
-          <Link className="button" href="/app/matches">进入比赛房间</Link>
+          {canCreate ? <ReliableLink className="button primary" href={selectionHref(params, { isNew: true })}>补录比赛</ReliableLink> : null}
+          <ReliableLink className="button" href="/app/matches">进入比赛房间</ReliableLink>
         </div>
       </section>
 
@@ -180,7 +180,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         <label className="field"><span>立场</span><select name="side" defaultValue={sideValues.has(params.side ?? "") ? params.side : "all"}><option value="all">全部立场</option><option>Aff</option><option>Neg</option><option>Pro</option><option>Con</option><option>Generic</option></select></label>
         <label className="field"><span>开始日期</span><input type="date" name="from" max={dateTo} defaultValue={dateFrom ?? ""} /></label>
         <label className="field"><span>结束日期</span><input type="date" name="to" min={dateFrom} defaultValue={dateTo ?? ""} /></label>
-        <div className="history-filter-actions"><button className="button primary" type="submit">筛选</button><Link className="button ghost" href="/app/history">清除</Link></div>
+        <div className="history-filter-actions"><button className="button primary" type="submit">筛选</button><ReliableLink className="button ghost" href="/app/history">清除</ReliableLink></div>
       </form>
 
       <section className="pending-review-section" aria-labelledby="pending-review-heading">
@@ -190,10 +190,10 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         {history.pending.length ? (
           <div className="pending-review-list">
             {history.pending.map((item) => (
-              <Link className="pending-review-row" href={selectionHref(params, { match: item.id })} key={item.id}>
-                <div><strong>{item.tournament} vs {item.opponent}</strong><p>{item.topic}</p></div>
+              <ReliableLink className="pending-review-row" href={selectionHref(params, { match: item.id })} key={item.id}>
+                <div data-language-raw><strong>{item.tournament} vs {item.opponent}</strong><p>{item.topic}</p></div>
                 <div className="pending-review-action"><time dateTime={item.date}>{dateLabel(item.date)}</time><span>{item.canEdit ? "填写复盘" : "查看"} →</span></div>
-              </Link>
+              </ReliableLink>
             ))}
           </div>
         ) : <p className="empty-state">当前没有待复盘的比赛。</p>}
@@ -214,7 +214,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
 
         <section className="history-report-detail" aria-label="赛后报告详情">
           {selectionError ? (
-            <div className="report-selection-state error" role="alert"><strong>无法打开报告</strong><p>{selectionError}</p><Link className="button" href={selectionHref(params, {})}>返回记录列表</Link></div>
+            <div className="report-selection-state error" role="alert"><strong>无法打开报告</strong><p>{selectionError}</p><ReliableLink className="button" href={selectionHref(params, {})}>返回记录列表</ReliableLink></div>
           ) : isNew ? (
             <MatchReportEditor key="new" report={null} evidenceOptions={manualEvidence} defaultDate={defaultDate} />
           ) : selection.report ? (

@@ -1,4 +1,5 @@
-import type { Evidence, Side, SpeechTemplateRow } from "@debate/shared";
+import type { Evidence, LanguageMode, Side, SpeechTemplateRow } from "@debate/shared";
+import { responseLanguageInstruction } from "./language.ts";
 import { messagesFromPromptBundle, promptBundleToCopyText, type AIProvider, type PromptBundle } from "./index.ts";
 import { generatedMatchNotesJsonSchema, normalizeGeneratedMatchNotes, type GeneratedMatchNotesShape } from "./schemas.ts";
 
@@ -7,6 +8,7 @@ export interface GenerateMatchNotesInput {
   side: Side;
   speechEvidence: Evidence[];
   opponentContext?: string;
+  responseLanguage: LanguageMode;
 }
 
 export type GeneratedMatchNotes = GeneratedMatchNotesShape;
@@ -17,7 +19,8 @@ export function buildMatchNotesPrompt(input: Omit<GenerateMatchNotesInput, "prov
       "You help competitive debaters prepare match notes.",
       "Return only JSON matching the requested schema.",
       "Only reference evidence IDs included in the user's evidence list.",
-      "AI output is a draft; write concise, judge-ready notes that the debater can confirm before insertion."
+      "AI output is a draft; write concise, judge-ready notes that the debater can confirm before insertion.",
+      responseLanguageInstruction(input.responseLanguage)
     ].join(" "),
     user: JSON.stringify({
       side: input.side,
@@ -38,7 +41,8 @@ export async function generateMatchNotesDraft(input: GenerateMatchNotesInput): P
   const raw = await input.provider.generateStructured<unknown>({
     schemaName: "GeneratedMatchNotes",
     schema: generatedMatchNotesJsonSchema,
-    messages: messagesFromPromptBundle(prompt)
+    messages: messagesFromPromptBundle(prompt),
+    responseLanguage: input.responseLanguage
   });
 
   return normalizeGeneratedMatchNotes(raw, allowedEvidenceIds);

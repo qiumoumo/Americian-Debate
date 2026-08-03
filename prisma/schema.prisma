@@ -87,6 +87,8 @@ model User {
   isSystemAdmin Boolean      @default(false)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  languageMode String?
+  languageOverridesJson Json?
   memberships  Membership[]
   documents    Document[]   @relation("DocumentOwner")
   matches      Match[]

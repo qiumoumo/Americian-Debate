@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { formatOptions, suggestedRoundTags } from "@debate/shared";
@@ -71,17 +71,17 @@ export default async function LibraryPage({
           <SectionCard title="录像列表" description="点击进入某场录像，查看内嵌视频并做笔记。">
             <div className="timeline">
               {rounds.map((round) => (
-                <Link
+                <ReliableLink
                   key={round.id}
                   href={`/app/library?round=${round.id}`}
                   className="timeline-item"
                   data-active={selected?.id === round.id}
                 >
-                  <strong>{round.title}</strong>
-                  <p>
+                  <strong data-language-raw>{round.title}</strong>
+                  <p data-language-raw>
                     {[round.teams, round.topic].filter(Boolean).join(" · ") || "未填题目"}
                   </p>
-                  <p>
+                  <p data-language-raw>
                     {round.format}
                     {round.tournament ? ` · ${round.tournament}` : ""}
                     {round.year ? ` · ${round.year}` : ""}
@@ -90,11 +90,11 @@ export default async function LibraryPage({
                   {round.tags.length ? (
                     <div className="evidence-meta">
                       {round.tags.map((tag) => (
-                        <span key={tag} className="pill">{tag}</span>
+                        <span key={tag} className="pill" data-language-raw>{tag}</span>
                       ))}
                     </div>
                   ) : null}
-                </Link>
+                </ReliableLink>
               ))}
               {rounds.length === 0 ? <p className="empty-state">还没有录像，先从左侧添加一场。</p> : null}
             </div>
@@ -127,6 +127,8 @@ function SelectedRound({
       <SectionCard
         title={round.title}
         description={[round.teams, round.topic].filter(Boolean).join(" · ") || undefined}
+        titleIsRaw
+        descriptionIsRaw
       >
         {embed.embedUrl ? (
           <div className="video-frame">
@@ -145,16 +147,16 @@ function SelectedRound({
           </p>
         )}
 
-        <p>
+        <p data-language-raw>
           {round.format}
           {round.tournament ? ` · ${round.tournament}` : ""}
           {round.year ? ` · ${round.year}` : ""}
         </p>
-        {round.description ? <p>{round.description}</p> : null}
+        {round.description ? <p data-language-raw>{round.description}</p> : null}
         {round.tags.length ? (
           <div className="evidence-meta">
             {round.tags.map((tag) => (
-              <span key={tag} className="pill">{tag}</span>
+              <span key={tag} className="pill" data-language-raw>{tag}</span>
             ))}
           </div>
         ) : null}
@@ -176,7 +178,7 @@ function SelectedRound({
           {round.notes.map((note) => (
             <div className="timeline-item" key={note.id}>
               {note.timestampSeconds != null ? <span className="pill">{formatTimestamp(note.timestampSeconds)}</span> : null}
-              <p>{note.body}</p>
+              <p data-language-raw>{note.body}</p>
               <form action={deleteNote}>
                 <input type="hidden" name="noteId" value={note.id} />
                 <button className="button ghost" type="submit">删除</button>

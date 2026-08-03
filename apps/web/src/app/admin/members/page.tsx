@@ -5,6 +5,8 @@ import { SectionCard } from "@/components/section-card";
 import { requireAdmin } from "@/lib/auth";
 import { sessionShellUser } from "@/lib/session-props";
 import { getPendingInvitations, getWorkspaceMembers } from "@/lib/data";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 import {
   inviteMember,
   removeMember,
@@ -29,6 +31,7 @@ export default async function AdminMembersPage({
     error?: string;
   }>;
 }) {
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const session = await requireAdmin();
   const [members, invitations, headerList, params] = await Promise.all([
     getWorkspaceMembers(session.workspace.id),
@@ -101,7 +104,7 @@ export default async function AdminMembersPage({
             return (
               <div className="table-row" key={membership.id}>
                 <div>
-                  <strong>{membership.user.name}</strong>
+                  <strong data-language-raw>{membership.user.name}</strong>
                   <br />
                   <small>{membership.user.email}</small>
                 </div>
@@ -153,7 +156,7 @@ export default async function AdminMembersPage({
             <div className="table-row" key={invitation.id}>
               <div><strong>{invitation.email}</strong></div>
               <div><span className="pill">{invitation.role}</span></div>
-              <div><small>{invitation.expiresAt.toLocaleDateString()}</small></div>
+              <div><small>{invitation.expiresAt.toLocaleDateString(locale)}</small></div>
               <div>
                 <form action={revokeInvitation} className="inline-form">
                   <input type="hidden" name="invitationId" value={invitation.id} />

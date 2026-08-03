@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReliableLink } from "@/components/reliable-link";
 import { aiPersonas, aiPersonaLabels, formatOptions, getPracticeRoundState, isPracticeMode, practiceModes, practiceModeLabels } from "@debate/shared";
 import { AppShell } from "@/components/app-shell";
 import { PracticeRoom } from "@/components/practice-room";
@@ -41,7 +41,7 @@ export default async function PracticePage({
       >
         <div className="practice-page-active">
           <div className="practice-back-row">
-            <Link className="button ghost" href="/app/practice">← 返回训练列表</Link>
+            <ReliableLink className="button ghost" href="/app/practice">← 返回训练列表</ReliableLink>
           </div>
 
           <PracticeRoom

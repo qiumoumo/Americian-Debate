@@ -8,7 +8,6 @@ import {
   useState,
   type FormEvent
 } from "react";
-import { useRouter } from "next/navigation";
 import { formatOptions, type ArgumentOutcome, type Side } from "@debate/shared";
 import type { MatchReportView } from "@/lib/match-reports";
 import {
@@ -71,7 +70,6 @@ function initialArguments(report: MatchReportView | null): EditorArgument[] {
 }
 
 export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }: MatchReportEditorProps) {
-  const router = useRouter();
   const [state, formAction, pending] = useActionState(saveMatchReportAction, initialActionState);
   const [argumentsList, setArgumentsList] = useState<EditorArgument[]>(() => initialArguments(report));
   const [evidence, setEvidence] = useState<EditorEvidence[]>(() => (report?.evidenceOptions ?? evidenceOptions).map((item) => ({ ...item })));
@@ -86,11 +84,11 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
   useEffect(() => {
     if (!state.ok || !state.matchId) return;
     if (!reportId) {
-      router.replace(`/app/history?match=${encodeURIComponent(state.matchId)}`);
+      window.location.replace(`/app/history?match=${encodeURIComponent(state.matchId)}`);
       return;
     }
-    router.refresh();
-  }, [reportId, router, state.matchId, state.ok, state.reportRevision]);
+    window.location.reload();
+  }, [reportId, state.matchId, state.ok, state.reportRevision]);
 
   const visibleEvidence = useMemo(() => {
     if (!canEdit) return evidence.filter((item) => item.selected);
@@ -156,7 +154,9 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
       <div className="report-editor-head">
         <div>
           <div className="eyebrow">{report ? "Match Report" : "Manual Entry"}</div>
-          <h2 id="report-editor-title">{report ? `${report.tournament} vs ${report.opponent}` : "补录历史比赛"}</h2>
+          <h2 id="report-editor-title">
+            {report ? <><span data-language-raw>{report.tournament}</span> vs <span data-language-raw>{report.opponent}</span></> : "补录历史比赛"}
+          </h2>
           {report ? (
             <p>
               {report.reportSubmittedAt
@@ -186,7 +186,7 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
             <div className="report-section-heading">
               <div>
                 <h3 id="report-match-heading">比赛信息</h3>
-                {report?.createdBy ? <p>记录人：{report.createdBy.name}</p> : null}
+                {report?.createdBy ? <p>记录人：<span data-language-raw>{report.createdBy.name}</span></p> : null}
               </div>
             </div>
             <div className="form-grid two-columns report-meta-grid">
@@ -310,14 +310,14 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
                   <div className="report-evidence-summary">
                     <label className="check-field">
                       <input type="checkbox" checked={item.selected} onChange={(event) => updateEvidence(item.evidenceId, { selected: event.target.checked })} />
-                      <span>{item.title}</span>
+                      <span data-language-raw>{item.title}</span>
                     </label>
                     <span className="pill">{item.side}</span>
                   </div>
-                  <p>{item.claim}</p>
+                  <p data-language-raw>{item.claim}</p>
                   {item.documentTitle || item.uploaderName || item.sourceUrl ? (
                     <div className="report-evidence-meta">
-                      {item.documentTitle || item.uploaderName ? <span>{[item.documentTitle, item.uploaderName].filter(Boolean).join(" · ")}</span> : null}
+                      {item.documentTitle || item.uploaderName ? <span data-language-raw>{[item.documentTitle, item.uploaderName].filter(Boolean).join(" · ")}</span> : null}
                       {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer">查看来源 ↗</a> : null}
                     </div>
                   ) : null}
@@ -353,7 +353,11 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
             {!state.ok && state.fieldErrors && Object.keys(state.fieldErrors).length ? (
               <ul>{Array.from(new Set(Object.values(state.fieldErrors))).map((message) => <li key={message}>{message}</li>)}</ul>
             ) : null}
-            {state.code === "REVISION_CONFLICT" ? <button className="button" type="button" onClick={() => window.location.reload()}>重新加载服务器版本</button> : null}
+            {state.code === "REVISION_CONFLICT" && reportId ? (
+              <a className="button" href={`/app/history?match=${encodeURIComponent(reportId)}`} target="_blank" rel="noreferrer">
+                在新标签页查看服务器版本
+              </a>
+            ) : null}
           </div>
         ) : null}
 

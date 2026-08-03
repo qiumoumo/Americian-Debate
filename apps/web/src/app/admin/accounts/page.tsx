@@ -4,6 +4,8 @@ import { SectionCard } from "@/components/section-card";
 import { requireSystemAdmin } from "@/lib/auth";
 import { getGlobalAccounts, type GlobalAccountFilter } from "@/lib/accounts";
 import { sessionShellUser } from "@/lib/session-props";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 import { deleteGlobalAccountAction, setGlobalAccountDisabledAction, setGlobalSystemAdminAction } from "./actions";
 
 const FILTERS: Array<{ value: GlobalAccountFilter; label: string }> = [
@@ -15,6 +17,7 @@ const FILTERS: Array<{ value: GlobalAccountFilter; label: string }> = [
 
 export default async function AdminAccountsPage({ searchParams }: { searchParams: Promise<{ q?: string; filter?: string }> }) {
   const session = await requireSystemAdmin();
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const params = await searchParams;
   const filter = FILTERS.some((item) => item.value === params.filter) ? params.filter as GlobalAccountFilter : "all";
   const accounts = await getGlobalAccounts(session.user.id, { query: params.q, filter });
@@ -35,7 +38,7 @@ export default async function AdminAccountsPage({ searchParams }: { searchParams
             const isSelf = account.id === session.user.id;
             return <article className="account-row" key={account.id}>
               <div className="account-summary">
-                <div><strong>{account.name}</strong><br /><small>{account.email}</small></div>
+                <div data-language-raw><strong>{account.name}</strong><br /><small>{account.email}</small></div>
                 <div className="actions">
                   <span className="pill">{account.online ? "在线" : "离线"}</span>
                   <span className="pill">{account.disabledAt ? "已禁用" : "正常"}</span>
@@ -46,8 +49,8 @@ export default async function AdminAccountsPage({ searchParams }: { searchParams
               <details className="account-details">
                 <summary>查看账号详情与操作</summary>
                 <div className="account-detail-grid">
-                  <div><span>注册时间</span><strong>{account.createdAt.toLocaleString()}</strong></div>
-                  <div><span>最近在线</span><strong>{account.lastSeenAt?.toLocaleString() ?? "无在线心跳"}</strong></div>
+                  <div><span>注册时间</span><strong>{account.createdAt.toLocaleString(locale)}</strong></div>
+                  <div><span>最近在线</span><strong>{account.lastSeenAt?.toLocaleString(locale) ?? "无在线心跳"}</strong></div>
                   <div><span>密码状态</span><strong>{account.hasPassword ? "已设置（不可查看）" : "未设置"}</strong></div>
                   <div><span>拥有数据</span><strong>{account.counts.documents} 文档 · {account.counts.matches} 比赛 · {account.counts.practiceSessions} 训练</strong></div>
                 </div>

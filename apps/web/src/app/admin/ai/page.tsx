@@ -6,6 +6,8 @@ import { getGlobalAIConfigs, isAIModelDiscoveryEnabled } from "@/lib/ai-config";
 import { requireSystemAdmin } from "@/lib/auth";
 import { getGlobalAIUsageLogs } from "@/lib/data";
 import { sessionShellUser } from "@/lib/session-props";
+import { dateLocaleForMode } from "@/lib/language-core";
+import { getEffectiveLanguage } from "@/lib/language-server";
 import { getAIProviderConfigStatus } from "@debate/ai";
 import {
   deleteGlobalAIConfigAction,
@@ -17,6 +19,7 @@ import {
 
 export default async function AdminAiPage() {
   const session = await requireSystemAdmin();
+  const locale = dateLocaleForMode(await getEffectiveLanguage("admin"));
   const [configs, aiLogs] = await Promise.all([
     getGlobalAIConfigs({ includeDisabled: true }),
     getGlobalAIUsageLogs()
@@ -52,7 +55,7 @@ export default async function AdminAiPage() {
           {configs.map((config) => (
             <details className="ai-config-row" key={config.id}>
               <summary>
-                <span className="ai-config-summary-main"><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></span>
+                <span className="ai-config-summary-main" data-language-raw><strong>{config.name}</strong><small>{config.providerId} · {config.model || "—"}</small></span>
                 <span className="actions">
                   {config.isDefault ? <span className="pill">全局默认</span> : null}
                   <span className="pill">{config.enabled ? "已启用" : "已停用"}</span>
@@ -88,7 +91,7 @@ export default async function AdminAiPage() {
           <div className="table-row header"><div>Task</div><div>Provider / model</div><div>Tokens / cost</div></div>
           {aiLogs.map((log) => (
             <div className="table-row" key={log.id}>
-              <div><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString()} · {log.source ?? "env"}</small></div>
+              <div data-language-raw><strong>{log.taskType}</strong><br /><small>{log.createdAt.toLocaleString(locale)} · {log.source ?? "env"}</small></div>
               <div>{log.provider}<br /><span className="pill">{log.model}</span></div>
               <div>in {log.inputTokenEstimate} / out {log.outputTokenEstimate}<br /><small>{log.costEstimateCents} cents est.</small></div>
             </div>

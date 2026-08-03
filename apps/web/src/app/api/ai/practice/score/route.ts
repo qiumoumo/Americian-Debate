@@ -7,12 +7,14 @@ import { requireUser } from "@/lib/auth";
 import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { getPracticeSession, readPracticeSummary, readRubricFocus, readTranscript } from "@/lib/data";
+import { getEffectiveLanguageForUser } from "@/lib/language-server";
 
 const MAX_BODY_BYTES = 8_000;
 const MAX_TRANSCRIPT_TURNS = 40;
 
 export async function POST(request: Request) {
   const session = await requireUser();
+  const responseLanguage = await getEffectiveLanguageForUser(session.user.id, "practice");
 
   try {
     if (!checkRateLimit(`${session.user.id}:practice-feedback`, 5, 60_000)) {
@@ -64,7 +66,8 @@ export async function POST(request: Request) {
         roundPhase: "post-practice feedback",
         rubricFocus: readRubricFocus(practice.rubricJson),
         conversationSummary
-      }
+      },
+      responseLanguage
     } as const;
 
     if (body.copyPromptOnly) {

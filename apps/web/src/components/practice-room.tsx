@@ -277,13 +277,13 @@ export function PracticeRoom({
       <header className="chat-room-header">
         <div className="chat-room-topic">
           <span className="chat-room-eyebrow">题目 Topic</span>
-          <strong>{topic || "尚未创建训练"}</strong>
+          <strong data-language-raw>{topic || "尚未创建训练"}</strong>
         </div>
         <div className="chat-room-chips">
           {metaChips.map((chip) => (
             <span className="chat-chip" key={chip.label}>
               <span className="chat-chip-label">{chip.label}</span>
-              <span className="chat-chip-value">{chip.value}</span>
+              <span className="chat-chip-value" data-language-raw>{chip.value}</span>
             </span>
           ))}
         </div>
@@ -295,7 +295,7 @@ export function PracticeRoom({
             transcript.map((turn, index) => (
               <div className="chat-turn" data-role={turn.role} key={`${turn.role}-${index}`}>
                 <strong>{turn.role === "user" ? "你 You" : "AI 对手 Opponent"}</strong>
-                <p>{turn.content}</p>
+                <p data-language-raw>{turn.content}</p>
               </div>
             ))
           ) : (
@@ -356,7 +356,7 @@ export function PracticeRoom({
                       <strong>{Math.round(feedback.score)}</strong>
                       <span>Coach score</span>
                     </div>
-                    <p>{feedback.feedback}</p>
+                    <p data-language-raw>{feedback.feedback}</p>
                     {feedback.rubric ? (
                       <div className="feedback-rubric">
                         <strong className="feedback-rubric-title">分维度评分 Rubric</strong>
@@ -373,7 +373,7 @@ export function PracticeRoom({
                                   <span className="feedback-rubric-en">{dimension.en}</span>
                                 </div>
                                 <div className="feedback-rubric-score">{Math.round(entry.score)}</div>
-                                <p className="feedback-rubric-comment">{entry.comment}</p>
+                                <p className="feedback-rubric-comment" data-language-raw>{entry.comment}</p>
                               </div>
                             );
                           })}
@@ -383,15 +383,15 @@ export function PracticeRoom({
                     <div className="grid three">
                       <div>
                         <strong>Strengths</strong>
-                        <ul>{feedback.strengths.map((item) => <li key={item}>{item}</li>)}</ul>
+                        <ul data-language-raw>{feedback.strengths.map((item) => <li key={item}>{item}</li>)}</ul>
                       </div>
                       <div>
                         <strong>Weaknesses</strong>
-                        <ul>{feedback.weaknesses.map((item) => <li key={item}>{item}</li>)}</ul>
+                        <ul data-language-raw>{feedback.weaknesses.map((item) => <li key={item}>{item}</li>)}</ul>
                       </div>
                       <div>
                         <strong>Next drills</strong>
-                        <ul>{feedback.nextDrills.map((item) => <li key={item}>{item}</li>)}</ul>
+                        <ul data-language-raw>{feedback.nextDrills.map((item) => <li key={item}>{item}</li>)}</ul>
                       </div>
                     </div>
                   </div>
@@ -412,12 +412,12 @@ export function PracticeRoom({
                       {drills.map((drill, index) => (
                         <article className="practice-drill-card" key={`${drill.title}-${index}`}>
                           <div className="practice-drill-head">
-                            <strong>{drill.title}</strong>
+                            <strong data-language-raw>{drill.title}</strong>
                             <span className="practice-drill-chip">{drill.targetDimension}</span>
                             <span className="practice-drill-chip">{drill.durationSeconds}s</span>
                           </div>
-                          {drill.instructions ? <p className="practice-drill-instructions">{drill.instructions}</p> : null}
-                          {drill.promptText ? <p className="practice-drill-prompt">{drill.promptText}</p> : null}
+                          {drill.instructions ? <p className="practice-drill-instructions" data-language-raw>{drill.instructions}</p> : null}
+                          {drill.promptText ? <p className="practice-drill-prompt" data-language-raw>{drill.promptText}</p> : null}
                           <button className="button" type="button" disabled={!drill.promptText} onClick={() => applyDrill(drill)}>
                             使用此训练 Use this drill
                           </button>

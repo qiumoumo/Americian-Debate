@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface PendingInvitation {
   id: string;
@@ -11,7 +10,6 @@ interface PendingInvitation {
 }
 
 export function PresenceAgent() {
-  const router = useRouter();
   const [invitation, setInvitation] = useState<PendingInvitation | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +42,7 @@ export function PresenceAgent() {
       const payload = await response.json() as { matchId?: string; error?: string };
       if (!response.ok) throw new Error(payload.error || "邀请处理失败");
       setInvitation(null);
-      if (accept && payload.matchId) router.push(`/app/matches?match=${payload.matchId}`);
+      if (accept && payload.matchId) window.location.assign(`/app/matches?match=${payload.matchId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "邀请处理失败，请重试。");
     } finally {
@@ -58,7 +56,7 @@ export function PresenceAgent() {
       <aside className="room-invite-dialog">
         <strong>{invitation.inviterName} 邀请你加入比赛房间</strong>
         <h2>{invitation.matchTitle}</h2>
-        <p>{invitation.topic}</p>
+        <p data-language-raw>{invitation.topic}</p>
         <p className="small-note">接受后会离开当前房间的在线状态并进入此房间。</p>
         {error ? <p className="status-error">{error}</p> : null}
         <div className="actions">

@@ -8,6 +8,7 @@ import { normalizeFlowRebuttalSuggestions, normalizeGeneratedMatchNotes, normali
 
 test("buildMatchNotesCopyPrompt includes evidence and JSON-only instruction", () => {
   const prompt = buildMatchNotesCopyPrompt({
+    responseLanguage: "en",
     side: "Aff",
     opponentContext: "They weigh fiscal costs.",
     speechEvidence: [
@@ -142,6 +143,7 @@ test("normalizeFlowRebuttalSuggestions defaults an unknown category to answer", 
 
 test("buildFlowRebuttalCopyPrompt includes opponent argument and evidence grounding rule", () => {
   const prompt = buildFlowRebuttalCopyPrompt({
+    responseLanguage: "en",
     side: "Neg",
     speechType: "Rebuttal",
     opponentArgument: "Fiscal pressure outweighs growth.",
@@ -166,6 +168,7 @@ test("buildFlowRebuttalCopyPrompt includes opponent argument and evidence ground
 
 test("buildPracticeSummaryCopyPrompt folds prior summary and new turns", () => {
   const prompt = buildPracticeSummaryCopyPrompt({
+    responseLanguage: "en",
     topic: "AI safety regulation",
     format: "LD",
     side: "Neg",
@@ -183,6 +186,7 @@ test("buildPracticeSummaryCopyPrompt folds prior summary and new turns", () => {
 
 test("buildPracticeOpponentCopyPrompt injects conversationSummary when provided", () => {
   const prompt = buildPracticeOpponentCopyPrompt({
+    responseLanguage: "en",
     topic: "AI safety regulation",
     format: "LD",
     side: "Neg",
@@ -216,6 +220,7 @@ test("summarizePracticeTranscript returns prior summary when nothing to compress
   };
 
   const summary = await summarizePracticeTranscript({
+    responseLanguage: "en",
     provider,
     topic: "AI safety regulation",
     format: "LD",
@@ -248,6 +253,7 @@ test("summarizePracticeTranscript falls back to prior summary when provider retu
   };
 
   const summary = await summarizePracticeTranscript({
+    responseLanguage: "en",
     provider,
     topic: "AI safety regulation",
     format: "LD",
@@ -257,4 +263,18 @@ test("summarizePracticeTranscript falls back to prior summary when provider retu
   });
 
   assert.equal(summary, "Kept summary.");
+});
+
+test("AI prompts carry Chinese and mixed terminology language contracts", () => {
+  const base = {
+    side: "Aff" as const,
+    opponentContext: "Fiscal costs",
+    speechEvidence: []
+  };
+  const chinese = buildMatchNotesCopyPrompt({ ...base, responseLanguage: "zh-CN" });
+  const mixed = buildMatchNotesCopyPrompt({ ...base, responseLanguage: "zh-terms-en" });
+  assert.match(chinese, /Simplified Chinese/);
+  assert.match(chinese, /Translate debate terminology/);
+  assert.match(mixed, /keep established debate terminology in English/);
+  assert.match(mixed, /Evidence, Flow, Practice/);
 });

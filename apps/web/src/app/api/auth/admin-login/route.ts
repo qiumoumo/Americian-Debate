@@ -5,6 +5,8 @@ import {
   verifyAdminCredentials
 } from "@/lib/auth";
 import { checkRateLimit, redirectToRequestHost } from "@/lib/api-route-utils";
+import { LANGUAGE_COOKIE } from "@/lib/language-core";
+import { LANGUAGE_COOKIE_OPTIONS, initializeUserLanguage } from "@/lib/language-server";
 
 export async function POST(request: Request) {
   const formData = await request.formData().catch(() => null);
@@ -22,7 +24,9 @@ export async function POST(request: Request) {
   }
 
   const { token } = await createSession(result.user.id, result.workspace.id, "admin");
+  const languageMode = result.user.languageMode ?? await initializeUserLanguage(result.user.id, request);
   const response = redirectToRequestHost(request, "/admin");
   response.cookies.set(ADMIN_SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+  response.cookies.set(LANGUAGE_COOKIE, languageMode, LANGUAGE_COOKIE_OPTIONS);
   return response;
 }

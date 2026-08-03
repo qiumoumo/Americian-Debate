@@ -7,12 +7,14 @@ import { requireUser } from "@/lib/auth";
 import { resolveAIProvider } from "@/lib/ai-config";
 import { checkRateLimit, jsonError, readLimitedJson, routeErrorResponse } from "@/lib/api-route-utils";
 import { getPracticeSession, readRubricFocus, readTranscript } from "@/lib/data";
+import { getEffectiveLanguageForUser } from "@/lib/language-server";
 
 const MAX_BODY_BYTES = 8_000;
 const MAX_TRANSCRIPT_TURNS = 12;
 
 export async function POST(request: Request) {
   const session = await requireUser();
+  const responseLanguage = await getEffectiveLanguageForUser(session.user.id, "practice");
 
   try {
     if (!checkRateLimit(`${session.user.id}:practice-drill`, 5, 60_000)) {
@@ -56,7 +58,8 @@ export async function POST(request: Request) {
         roundState,
         roundPhase: roundState.phaseLabel,
         rubricFocus: readRubricFocus(practice.rubricJson)
-      }
+      },
+      responseLanguage
     } as const;
 
     if (body.copyPromptOnly) {
