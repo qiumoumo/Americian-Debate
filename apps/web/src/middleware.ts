@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_RETURN_TO_HEADER } from "@/lib/auth-redirect";
 
 // Kept in sync with ADMIN_SESSION_COOKIE in src/lib/auth.ts. Middleware runs on
 // the edge runtime and cannot import auth.ts (Prisma / node APIs), so the cookie
@@ -11,6 +12,7 @@ export function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-debate-pathname", pathname);
+  requestHeaders.set(AUTH_RETURN_TO_HEADER, `${pathname}${request.nextUrl.search}`);
   const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } });
 
   // The admin login page must stay reachable without an admin session.

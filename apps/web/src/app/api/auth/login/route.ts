@@ -6,6 +6,7 @@ import {
   verifyCredentials
 } from "@/lib/auth";
 import { checkRateLimit, redirectToRequestHost } from "@/lib/api-route-utils";
+import { pathWithAuthTarget } from "@/lib/auth-redirect";
 import { LANGUAGE_COOKIE } from "@/lib/language-core";
 import { LANGUAGE_COOKIE_OPTIONS, initializeUserLanguage } from "@/lib/language-server";
 
@@ -17,12 +18,12 @@ export async function POST(request: Request) {
   const rateKey = `login:${email.trim().toLowerCase() || request.headers.get("x-forwarded-for") || "unknown"}`;
 
   if (!checkRateLimit(rateKey, 8, 60_000)) {
-    return redirectToRequestHost(request, "/login?error=rate_limited");
+    return redirectToRequestHost(request, pathWithAuthTarget("/login?error=rate_limited", target));
   }
 
   const result = await verifyCredentials(email, password);
   if (!result) {
-    return redirectToRequestHost(request, "/login?error=invalid");
+    return redirectToRequestHost(request, pathWithAuthTarget("/login?error=invalid", target));
   }
 
   const { token } = await createSession(result.user.id, result.workspace.id);

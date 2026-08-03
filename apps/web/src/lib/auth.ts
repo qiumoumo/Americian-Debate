@@ -1,9 +1,14 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@debate/db";
 import { hasSystemAdminAccess } from "@/lib/admin-policy";
+import {
+  AUTH_RETURN_TO_HEADER,
+  pathWithAuthTarget,
+  sanitizeInternalRedirectTarget
+} from "@/lib/auth-redirect";
 
 export const SESSION_COOKIE = "debate_session";
 export const ADMIN_SESSION_COOKIE = "debate_admin_session";
@@ -23,20 +28,7 @@ export type SessionKind = "user" | "admin";
 const BCRYPT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;
 
-export function sanitizeInternalRedirectTarget(target: string | null | undefined) {
-  const fallback = "/app/documents";
-  const value = String(target ?? fallback).trim();
-  if (!value.startsWith("/") || value.startsWith("//")) {
-    return fallback;
-  }
-
-  try {
-    const parsed = new URL(value, "http://debate.local");
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return fallback;
-  }
-}
+export { sanitizeInternalRedirectTarget };
 
 // ---- Password hashing ----
 
@@ -171,6 +163,10 @@ export async function getAdminSession() {
 export async function requireUser(options: { allowPasswordChange?: boolean } = {}) {
   const session = await getSession();
   if (!session) {
+    const returnTo = (await headers()).get(AUTH_RETURN_TO_HEADER);
+    if (returnTo?.startsWith("/app")) {
+      redirect(pathWithAuthTarget("/", returnTo));
+    }
     redirect("/login");
   }
   if (session.user.mustChangePassword && !options.allowPasswordChange) {
