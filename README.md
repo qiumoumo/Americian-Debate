@@ -6,6 +6,16 @@ This repository contains a full-stack debate training and team workspace. It is 
 SQLite stores local data, AI provider keys stay server-side, and generated prompts can be copied manually when no paid
 provider is configured.
 
+## Windows 一键使用
+
+Windows 用户无需手动输入安装命令：下载并解压完整项目后，直接双击项目根目录中的 **`一键启动.cmd`** 即可。
+
+首次运行会自动检测兼容的 Node.js、安装项目依赖、生成本地安全配置、初始化数据库、开启 AI 模型发现、构建并启动应用；服务就绪后会自动打开浏览器。以后再次使用时仍然双击同一个文件，已有账号、数据以及 AI Provider 配置都会保留。
+
+如果电脑缺少兼容的 Node.js，启动器会从 Node.js 官方网站下载并校验安装程序，Windows 可能会显示一次用户账户控制确认。遇到网络、代理或端口问题时，窗口会保留明确的处理提示。
+
+> 偏好手动部署或需要自定义服务器配置的用户，可以继续使用下方原有的 **Quick Start**、**AI Configuration** 和 **Troubleshooting** 说明。
+
 ## Highlights
 
 - Debate workspace for documents, evidence, match preparation, practice rounds, and team administration.
