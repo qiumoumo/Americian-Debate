@@ -30,7 +30,7 @@ export default async function AdminPage() {
       <section className="hero">
         <div className="eyebrow">Admin</div>
         <h1>管理端概览</h1>
-        <p>队伍、权限、资料库与 AI 使用审计的总入口。当前工作区：{session.workspace.name}。</p>
+        <p>队伍、权限、资料库与 AI 使用审计的总入口。当前工作区：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
 
       <div className="grid three">

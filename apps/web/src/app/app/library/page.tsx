@@ -78,14 +78,14 @@ export default async function LibraryPage({
                   data-active={selected?.id === round.id}
                 >
                   <strong data-language-raw>{round.title}</strong>
-                  <p data-language-raw>
-                    {[round.teams, round.topic].filter(Boolean).join(" · ") || "未填题目"}
-                  </p>
-                  <p data-language-raw>
-                    {round.format}
-                    {round.tournament ? ` · ${round.tournament}` : ""}
-                    {round.year ? ` · ${round.year}` : ""}
-                    {round.notes.length ? ` · ${round.notes.length} 条笔记` : ""}
+                  {[round.teams, round.topic].some(Boolean)
+                    ? <p data-language-raw>{[round.teams, round.topic].filter(Boolean).join(" · ")}</p>
+                    : <p>未填题目</p>}
+                  <p>
+                    <span data-language-raw>{round.format}</span>
+                    {round.tournament ? <> · <span data-language-raw>{round.tournament}</span></> : null}
+                    {round.year ? <> · <span data-language-raw>{round.year}</span></> : null}
+                    {round.notes.length ? <> · <span>{`${round.notes.length} 条笔记`}</span></> : null}
                   </p>
                   {round.tags.length ? (
                     <div className="evidence-meta">

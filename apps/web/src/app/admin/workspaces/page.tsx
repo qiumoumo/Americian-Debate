@@ -26,7 +26,7 @@ export default async function AdminWorkspacesPage({
       <section className="hero">
         <div className="eyebrow">Workspaces</div>
         <h1>工作区 / 队伍管理</h1>
-        <p>创建、重命名、归档工作区，并切换当前管理的工作区。当前：{session.workspace.name}。</p>
+        <p>创建、重命名、归档工作区，并切换当前管理的工作区。当前：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
 
       {errorMessage ? <p className="empty-state">{errorMessage}</p> : null}

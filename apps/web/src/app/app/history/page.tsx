@@ -185,7 +185,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
 
       <section className="pending-review-section" aria-labelledby="pending-review-heading">
         <div className="section-title">
-          <div><h2 id="pending-review-heading">待复盘</h2><p>{history.pending.length} 场比赛尚未提交赛后数据</p></div>
+          <div><h2 id="pending-review-heading">待复盘</h2><p>{`${history.pending.length} 场比赛尚未提交赛后数据`}</p></div>
         </div>
         {history.pending.length ? (
           <div className="pending-review-list">
@@ -202,7 +202,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
       <div className="match-history-workspace">
         <aside className="history-record-index" aria-labelledby="history-record-heading">
           <div className="section-title">
-            <div><h2 id="history-record-heading">已提交报告</h2><p>{history.reports.length} 条筛选结果</p></div>
+            <div><h2 id="history-record-heading">已提交报告</h2><p>{`${history.reports.length} 条筛选结果`}</p></div>
           </div>
           <div className="history-record-list">
             {history.reports.map((item) => (

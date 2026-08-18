@@ -33,7 +33,7 @@ export default async function AdminAnalyticsPage() {
       <section className="hero">
         <div className="eyebrow">Analytics</div>
         <h1>数据分析</h1>
-        <p>基于真实比赛与 AI 日志。当前工作区：{session.workspace.name}。</p>
+        <p>基于真实比赛与 AI 日志。当前工作区：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
 
       <div className="grid three">

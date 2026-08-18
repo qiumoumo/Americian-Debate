@@ -277,7 +277,7 @@ export function PracticeRoom({
       <header className="chat-room-header">
         <div className="chat-room-topic">
           <span className="chat-room-eyebrow">题目 Topic</span>
-          <strong data-language-raw>{topic || "尚未创建训练"}</strong>
+          {topic ? <strong data-language-raw>{topic}</strong> : <strong>尚未创建训练</strong>}
         </div>
         <div className="chat-room-chips">
           {metaChips.map((chip) => (

@@ -117,11 +117,22 @@ export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: Evid
                 </div>
                 <strong data-language-raw>{card.title}</strong>
                 <p className="library-claim" data-language-raw>{card.claim}</p>
-                <p className="library-uploader" data-language-raw>
-                  {card.isMine ? "我上传" : `由 ${card.uploaderName ?? "未知用户"} / ${card.uploaderWorkspaceName ?? "未知工作区"} 上传`}
+                <p className="library-uploader">
+                  {card.isMine ? "我上传" : <>
+                    上传者：{card.uploaderName
+                      ? <span data-language-raw>{card.uploaderName}</span>
+                      : <span>未知用户</span>}
+                    {" · "}所在工作区：{card.uploaderWorkspaceName
+                      ? <span data-language-raw>{card.uploaderWorkspaceName}</span>
+                      : <span>未知工作区</span>}
+                  </>}
                 </p>
-                <p className="library-source" data-language-raw>
-                  {card.author ?? "Unknown author"} · {card.publication ?? "Unknown publication"} · {card.publishedDate ?? "No date"}
+                <p className="library-source">
+                  {card.author ? <span data-language-raw>{card.author}</span> : "Unknown author"}
+                  {" · "}
+                  {card.publication ? <span data-language-raw>{card.publication}</span> : "Unknown publication"}
+                  {" · "}
+                  {card.publishedDate ? <span data-language-raw>{card.publishedDate}</span> : "No date"}
                 </p>
                 {card.sourceUrl ? <a className="library-source-link" href={card.sourceUrl} target="_blank" rel="noreferrer">打开原始来源</a> : null}
               </div>

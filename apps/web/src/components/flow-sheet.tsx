@@ -502,7 +502,7 @@ function FlowRowCells({
           <span className="pill">{row.side}</span>
           {riskyCount > 0 ? <span className="flow-risk-badge" title="dropped / conceded 数量">⚠ {riskyCount}</span> : null}
         </div>
-        <strong data-language-raw>{row.title || "未命名论点"}</strong>
+        {row.title ? <strong data-language-raw>{row.title}</strong> : <strong>未命名论点</strong>}
         {row.category && row.category !== "general" ? <span className="small-note">{row.category}</span> : null}
         <WeighingPanel row={row} onWeighingChange={onWeighingChange} />
         <form action={deleteFlowRow}>
@@ -709,9 +709,9 @@ function EvidenceChip({ evidenceId, evidence }: EvidenceChipProps) {
           </span>
           {evidence.claim ? <span className="flow-chip-claim" data-language-raw>{evidence.claim}</span> : null}
           {evidence.quote ? <span className="flow-chip-quote" data-language-raw>“{evidence.quote}”</span> : null}
-          <span className="flow-chip-meta" data-language-raw>
-            {[evidence.author, evidence.publication, evidence.publishedDate].filter(Boolean).join(" · ") || "无来源信息"}
-          </span>
+          {[evidence.author, evidence.publication, evidence.publishedDate].some(Boolean)
+            ? <span className="flow-chip-meta" data-language-raw>{[evidence.author, evidence.publication, evidence.publishedDate].filter(Boolean).join(" · ")}</span>
+            : <span className="flow-chip-meta">无来源信息</span>}
           {evidence.sourceUrl ? (
             <a className="flow-chip-link" href={evidence.sourceUrl} target="_blank" rel="noreferrer">查看原文 ↗</a>
           ) : (
@@ -775,7 +775,11 @@ function FlowAssistant({
         <strong>AI 反驳 · {cell.speechType}</strong>
         <button className="link-button" type="button" onClick={onClose}>收起</button>
       </div>
-      <p className="small-note">对方论点：<span data-language-raw>{cell.content.trim() || "（先在单元格填写对方论点）"}</span></p>
+      <p className="small-note">
+        对方论点：{cell.content.trim()
+          ? <span data-language-raw>{cell.content.trim()}</span>
+          : <span>（先在单元格填写对方论点）</span>}
+      </p>
       <div className="evidence-picker">
         {evidence.map((card) => (
           <label className="check-card" key={card.id}>

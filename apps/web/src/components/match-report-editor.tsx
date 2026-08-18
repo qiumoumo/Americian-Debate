@@ -252,7 +252,7 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
             <div className="report-section-heading">
               <div>
                 <h3 id="report-arguments-heading">论点结果</h3>
-                <p>{argumentsList.length} 条结构化记录</p>
+                <p>{`${argumentsList.length} 条结构化记录`}</p>
               </div>
               {canEdit ? <button className="button report-add-button" type="button" onClick={addArgument}>＋ 添加论点</button> : null}
             </div>
@@ -295,7 +295,7 @@ export function MatchReportEditor({ report, evidenceOptions = [], defaultDate }:
             <div className="report-section-heading">
               <div>
                 <h3 id="report-evidence-heading">Evidence 评价</h3>
-                <p>{selectedEvidenceCount} 条已选 evidence</p>
+                <p>{`${selectedEvidenceCount} 条已选 evidence`}</p>
               </div>
               {canEdit && evidence.length ? (
                 <label className="report-evidence-search">

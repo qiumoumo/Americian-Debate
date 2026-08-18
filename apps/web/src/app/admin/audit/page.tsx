@@ -40,7 +40,7 @@ export default async function AdminAuditPage() {
       <section className="hero">
         <div className="eyebrow">Audit</div>
         <h1>操作审计日志</h1>
-        <p>管理端的每一次写操作都会留痕。最近 150 条，倒序排列。当前工作区：{session.workspace.name}。</p>
+        <p>管理端的每一次写操作都会留痕。最近 150 条，倒序排列。当前工作区：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
 
       <SectionCard title="操作记录" description="记录操作人、动作、对象与时间。">
@@ -49,9 +49,9 @@ export default async function AdminAuditPage() {
           {logs.map((log) => (
             <div className="table-row" key={log.id}>
               <div><small>{log.createdAt.toLocaleString(locale)}</small></div>
-              <div>{log.actorName ?? "—"}</div>
+              <div data-language-raw>{log.actorName ?? "—"}</div>
               <div><span className="pill">{ACTION_LABELS[log.action] ?? log.action}</span></div>
-              <div><small>{[log.targetType, describeMeta(log.metaJson)].filter(Boolean).join(" · ")}</small></div>
+              <div data-language-raw><small>{[log.targetType, describeMeta(log.metaJson)].filter(Boolean).join(" · ")}</small></div>
             </div>
           ))}
           {logs.length === 0 ? <p className="empty-state">还没有审计记录。</p> : null}
