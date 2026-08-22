@@ -17,7 +17,7 @@ function safeExternalUrl(value: string) {
 
 export function EvidenceCard({ evidence, showIssues = false }: EvidenceCardProps) {
   const sourceUrl = safeExternalUrl(evidence.sourceUrl);
-  const sourceLabel = evidence.publication ?? evidence.author ?? "Unlisted source";
+  const sourceLabel = evidence.publication ?? evidence.author;
   const issues = showIssues ? validateEvidence(evidence) : [];
 
   return (
@@ -35,12 +35,20 @@ export function EvidenceCard({ evidence, showIssues = false }: EvidenceCardProps
       <p className="evidence-claim" data-language-raw>{evidence.claim}</p>
       <blockquote className="evidence-quote" data-language-raw>{evidence.quote}</blockquote>
       <div className="evidence-source">
-        <span className="evidence-source-main" data-language-raw>{sourceLabel}</span>
-        <span className="evidence-source-date" data-language-raw>{evidence.publishedDate ?? "No date"}</span>
+        {sourceLabel
+          ? <span className="evidence-source-main" data-language-raw>{sourceLabel}</span>
+          : <span className="evidence-source-main">Unlisted source</span>}
+        {evidence.publishedDate
+          ? <span className="evidence-source-date" data-language-raw>{evidence.publishedDate}</span>
+          : <span className="evidence-source-date">No date</span>}
       </div>
       <div className="reference-popover" role="note" aria-label={`Reference for ${evidence.title}`}>
-        <strong data-language-raw>{evidence.author ?? "Unknown author"}</strong>
-        <p data-language-raw>{evidence.publication ?? "Unlisted publication"} · {evidence.publishedDate ?? "No date"}</p>
+        {evidence.author ? <strong data-language-raw>{evidence.author}</strong> : <strong>Unknown author</strong>}
+        <p>
+          {evidence.publication ? <span data-language-raw>{evidence.publication}</span> : "Unlisted publication"}
+          {" · "}
+          {evidence.publishedDate ? <span data-language-raw>{evidence.publishedDate}</span> : "No date"}
+        </p>
         {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noreferrer">Open source link →</a> : <span className="small-note">No source link</span>}
       </div>
     </article>

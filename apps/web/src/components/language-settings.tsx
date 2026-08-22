@@ -39,7 +39,7 @@ export function LanguageSettings() {
       <div className="language-settings-global">
         <label htmlFor="global-language"><strong>{english ? "Global language" : "全局语言"}</strong></label>
         <select id="global-language" value={globalMode} onChange={(event) => { setSaved(false); setGlobalMode(event.target.value as LanguageMode); }}>
-          {languageModes.map((mode) => <option key={mode} value={mode}>{modeLabels[mode].label}</option>)}
+          {languageModes.map((mode) => <option key={mode} value={mode}>{english ? modeLabels[mode].enLabel : modeLabels[mode].label}</option>)}
         </select>
       </div>
       <div className="language-scope-list">
@@ -48,7 +48,7 @@ export function LanguageSettings() {
             <span><strong>{english ? scopeLabels[scope].en : scopeLabels[scope].zh}</strong><small>{scope}</small></span>
             <select value={overrides[scope] ?? "inherit"} onChange={(event) => setOverride(scope, event.target.value)}>
               <option value="inherit">{english ? "Follow global" : "跟随全局"}</option>
-              {languageModes.map((mode) => <option key={mode} value={mode}>{modeLabels[mode].label}</option>)}
+              {languageModes.map((mode) => <option key={mode} value={mode}>{english ? modeLabels[mode].enLabel : modeLabels[mode].label}</option>)}
             </select>
           </label>
         ))}

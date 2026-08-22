@@ -33,7 +33,7 @@ export function AppShell({ activeHref, children, note, user }: AppShellProps) {
             <strong data-language-raw>{user.name}</strong>
             <span>{user.email}</span>
             <span className="pill">{user.role}</span>
-            <small>{user.workspaceName}</small>
+            <small data-language-raw>{user.workspaceName}</small>
           </div>
         ) : null}
         <nav className="nav-group" aria-label="Primary navigation">

@@ -54,7 +54,7 @@ export default async function AdminAccountsPage({ searchParams }: { searchParams
                   <div><span>密码状态</span><strong>{account.hasPassword ? "已设置（不可查看）" : "未设置"}</strong></div>
                   <div><span>拥有数据</span><strong>{account.counts.documents} 文档 · {account.counts.matches} 比赛 · {account.counts.practiceSessions} 训练</strong></div>
                 </div>
-                <div className="membership-list">{account.memberships.map((membership) => <span className="pill" key={`${membership.workspaceId}-${membership.role}`}>{membership.workspaceName} · {membership.role}</span>)}</div>
+                <div className="membership-list">{account.memberships.map((membership) => <span className="pill" key={`${membership.workspaceId}-${membership.role}`}><span data-language-raw>{membership.workspaceName}</span> · {membership.role}</span>)}</div>
                 <div className="account-actions">
                   {!isSelf ? <AccountPasswordReset userId={account.id} /> : <span className="small-note">当前管理员账号请在用户端自行改密。</span>}
                   {!isSelf ? <form action={setGlobalAccountDisabledAction}><input type="hidden" name="userId" value={account.id} /><input type="hidden" name="disabled" value={String(!account.disabledAt)} /><button className="button" type="submit">{account.disabledAt ? "启用账号" : "禁用账号"}</button></form> : null}

@@ -1,9 +1,9 @@
 import type { LanguageMode, LanguageScope } from "@debate/shared";
 
-export const modeLabels: Record<LanguageMode, { short: string; label: string }> = {
-  "zh-CN": { short: "中", label: "简体中文" },
-  "zh-terms-en": { short: "中·Terms", label: "中文界面 + English 术语" },
-  en: { short: "EN", label: "English" }
+export const modeLabels: Record<LanguageMode, { short: string; label: string; enLabel: string }> = {
+  "zh-CN": { short: "中", label: "简体中文", enLabel: "Simplified Chinese" },
+  "zh-terms-en": { short: "中·Terms", label: "中文界面 + English 术语", enLabel: "Chinese + English terms" },
+  en: { short: "EN", label: "English", enLabel: "English" }
 };
 
 export const scopeLabels: Record<LanguageScope, { zh: string; en: string }> = {
@@ -144,6 +144,10 @@ const entries: Entry[] = [
   { source: "当前管理员账号请在用户端自行改密。", en: "Change the current administrator password in the user workspace." },
   { source: "创建文档 →", en: "Create document" },
   { source: "创建文档", en: "Create document" },
+  { source: "文档编辑界面：修改标题、正文，管理这份文档的 evidence。", en: "Document editor: edit the title and body, and manage this document's Evidence." },
+  { source: "创建文档后会直接进入编辑界面；从列表可随时打开任意一份文档继续编辑。", en: "New documents open directly in the editor; open any document from the list to continue editing." },
+  { source: "文档正文", en: "Document body" },
+  { source: "导入后可撤回。", en: "Imported cards can be undone." },
   { source: "文档列表", en: "Documents" },
   { source: "文档标题", en: "Document title" },
   { source: "标题", en: "Title" },
@@ -155,9 +159,31 @@ const entries: Entry[] = [
   { source: "← 返回文档列表", en: "← Back to documents" },
   { source: "还没有文档。先创建一份资料文件。", en: "No documents yet. Create your first file." },
   { source: "导入 Evidence", en: "Import Evidence" },
+  { source: "粘贴外部 evidence 文本", en: "Paste external Evidence text" },
+  { source: "支持 Title:/Claim:/Quote:/Source:/Author:/Date:/Tags: 标签式，或首行标题 + 出处行 + 引用的辩论卡式。多张卡片用 --- 或空行分隔。", en: "Supports Title:/Claim:/Quote:/Source:/Author:/Date:/Tags: labels or debate cards with a title, citation line, and quote. Separate cards with --- or a blank line." },
   { source: "导入中...", en: "Importing..." },
   { source: "导入失败。", en: "Import failed." },
   { source: "解析预览", en: "Parsed preview" },
+  { source: "填入示例", en: "Fill example" },
+  { source: "没有解析到卡片，试试用 --- 分隔或 Title:/Quote: 标签。", en: "No cards found. Try separating cards with --- or using Title:/Quote: labels." },
+  { source: "已填入示例，点「解析预览」。", en: "Example filled in. Select Parse preview." },
+  { source: "请先创建文档，再导入 evidence。", en: "Create a document before importing Evidence." },
+  { source: "清空", en: "Clear" },
+  { source: "全选", en: "Select all" },
+  { source: "全不选", en: "Select none" },
+  { source: "撤回选择", en: "Undo selection" },
+  { source: "选中", en: "selected" },
+  { source: "导入到", en: "Import into" },
+  { source: "标签（逗号分隔）", en: "Tags (comma-separated)" },
+  { source: "只看有问题", en: "Show issues only" },
+  { source: "打开原始来源", en: "Open original source" },
+  { source: "没有匹配的 evidence。", en: "No matching Evidence." },
+  { source: "加入比赛", en: "Add to match" },
+  { source: "移出比赛", en: "Remove from match" },
+  { source: "接受并进入", en: "Accept and enter" },
+  { source: "拒绝", en: "Decline" },
+  { source: "比赛房间邀请", en: "Match room invitation" },
+  { source: "接受后会离开当前房间的在线状态并进入此房间。", en: "Accepting will leave your current room presence and enter this room." },
   { source: "卡片标题", en: "Card title" },
   { source: "来源", en: "Source" },
   { source: "标签", en: "Tags" },
@@ -347,7 +373,234 @@ const entries: Entry[] = [
   { source: "Live Flow", en: "Live Flow", zh: "实时流程表", hybrid: "Live Flow" },
   { source: "Copy prompt", en: "Copy prompt", zh: "复制提示词", hybrid: "Copy prompt" },
   { source: "Generate AI draft", en: "Generate AI draft", zh: "生成 AI 草稿", hybrid: "生成 AI draft" },
-  { source: "Generating...", en: "Generating...", zh: "生成中...", hybrid: "生成中..." }
+  { source: "Generating...", en: "Generating...", zh: "生成中...", hybrid: "生成中..." },
+  { source: "Provider", en: "Provider", zh: "服务商", hybrid: "Provider" },
+  { source: "Model", en: "Model", zh: "模型", hybrid: "Model" },
+  { source: "Capability", en: "Capability", zh: "能力", hybrid: "Capability" },
+  { source: "Status", en: "Status", zh: "状态", hybrid: "Status" },
+  { source: "Note", en: "Note", zh: "说明", hybrid: "Note" },
+  { source: "configured", en: "Configured", zh: "已配置", hybrid: "configured" },
+  { source: "missing config", en: "Missing configuration", zh: "配置缺失", hybrid: "missing config" },
+  { source: "no model", en: "No model", zh: "未设置模型", hybrid: "no model" },
+  { source: "yes", en: "Yes", zh: "是", hybrid: "yes" },
+  { source: "no", en: "No", zh: "否", hybrid: "no" },
+  { source: "limited", en: "Limited", zh: "有限", hybrid: "limited" },
+  { source: "not reported", en: "Not reported", zh: "未报告", hybrid: "not reported" },
+  { source: "JSON draft", en: "JSON draft", zh: "JSON 草稿", hybrid: "JSON draft" },
+  { source: "Long context", en: "Long context", zh: "长上下文", hybrid: "Long context" },
+  { source: "Vision", en: "Vision", zh: "视觉输入", hybrid: "Vision" },
+  { source: "已配置", en: "Configured" },
+  { source: "未配置", en: "Not configured" },
+  { source: "已配置（留空保持不变）", en: "Configured (leave blank to keep it)" },
+  { source: "Key 已配置", en: "Key configured", zh: "密钥已配置", hybrid: "Key configured" },
+  { source: "Key 未配置", en: "Key not configured", zh: "密钥未配置", hybrid: "Key not configured" },
+  { source: "当前 AI", en: "Current AI" },
+  { source: "跟随全局默认", en: "Follow global default" },
+  { source: "切换中…", en: "Switching..." },
+  { source: "获取中…", en: "Loading models..." },
+  { source: "测试中…", en: "Testing..." },
+  { source: "选择已获取的模型", en: "Choose a discovered model" },
+  { source: "自定义 OpenAI 兼容端点", en: "Custom OpenAI-compatible endpoint" },
+  { source: "例如：团队 DeepSeek", en: "Example: Team DeepSeek" },
+  { source: "缺少变量", en: "Missing variables" },
+  { source: "AI 接入信息填写位置：", en: "AI connection settings are read from:" },
+  { source: "。这个页面只展示状态，不会显示 API key。", en: ". This page only shows status and never displays the API key." },
+  { source: "当前 provider 可以用于 MVP。mock 模式不需要真实 key。", en: "The current provider is ready for the MVP. Mock mode does not require a real key." },
+  { source: "仍会做运行时校验", en: "Runtime validation still applies" },
+  { source: "本 MVP 暂未启用图片输入", en: "Image input is not enabled in this MVP" },
+  { source: "服务器环境变量", en: "Server environment" },
+  { source: "管理员尚未启用全局 AI。", en: "No global AI configuration is enabled yet." },
+  { source: "No date", en: "No date", zh: "无日期", hybrid: "No date" },
+  { source: "Unknown author", en: "Unknown author", zh: "未知作者", hybrid: "Unknown author" },
+  { source: "Unlisted publication", en: "Unlisted publication", zh: "未注明刊物", hybrid: "Unlisted publication" },
+  { source: "Unknown publication", en: "Unknown publication", zh: "未知刊物", hybrid: "Unknown publication" },
+  { source: "Unlisted source", en: "Unlisted source", zh: "未注明来源", hybrid: "Unlisted source" },
+  { source: "Open source link →", en: "Open source link →", zh: "打开来源链接 →", hybrid: "Open source link →" },
+  { source: "No source link", en: "No source link", zh: "无来源链接", hybrid: "No source link" },
+  { source: "Reference for", en: "Reference for", zh: "引用信息：", hybrid: "Reference for" },
+  { source: "备注", en: "Notes" },
+  { source: "结果", en: "Result" },
+  { source: "筛选", en: "Filter" },
+  { source: "在线", en: "Online" },
+  { source: "正常", en: "Active" },
+  { source: "开始", en: "Start" },
+  { source: "暂停", en: "Pause" },
+  { source: "重置", en: "Reset" },
+  { source: "查看", en: "View" },
+  { source: "移除", en: "Remove" },
+  { source: "待定", en: "Pending" },
+  { source: "待复盘", en: "Pending review" },
+  { source: "比赛结果", en: "Match result" },
+  { source: "总胜率", en: "Overall win rate" },
+  { source: "训练次数", en: "Practice sessions" },
+  { source: "已提交比赛", en: "Submitted matches" },
+  { source: "AI 请求", en: "AI requests" },
+  { source: "估算成本", en: "Estimated cost" },
+  { source: "近 500 条内", en: "Within the latest 500 entries" },
+  { source: "还没有 AI 用量数据。", en: "No AI usage data yet." },
+  { source: "还没有 AI 请求日志。", en: "No AI request logs yet." },
+  { source: "活跃比赛房间", en: "Active match rooms" },
+  { source: "在线用户", en: "Online users" },
+  { source: "当前没有在线用户。", en: "No users are currently online." },
+  { source: "选择在线用户", en: "Choose an online user" },
+  { source: "发送弹窗邀请", en: "Send invitation" },
+  { source: "已移出", en: "Removed" },
+  { source: "当前没有有人的比赛房间。", en: "There are no occupied match rooms." },
+  { source: "未命名论点", en: "Untitled argument" },
+  { source: "无来源信息", en: "No source information" },
+  { source: "（先在单元格填写对方论点）", en: "(Enter the opposing argument in the cell first)" },
+  { source: "未填题目", en: "No topic provided" },
+  { source: "我上传", en: "Uploaded by me" },
+  { source: "上传者", en: "Uploader" },
+  { source: "所在工作区", en: "Workspace" },
+  { source: "未知用户", en: "Unknown user" },
+  { source: "未知工作区", en: "Unknown workspace" },
+  { source: "✅ 已配置", en: "✅ Configured" },
+  { source: "按正/反方分别统计的胜率。", en: "Win rates split by affirmative/pro and negative/con." },
+  { source: "把导出的 JSON 粘贴到下方，将以新增方式恢复文档与公告；比赛记录请使用 SQLite 完整备份恢复。", en: "Paste exported JSON below to restore documents and announcements as new records; use a complete SQLite backup for match records." },
+  { source: "保存优秀比赛的视频、题目、赛制、队伍与年份，边看边做带时间戳的 flow 笔记。借鉴 debatevid.io 的资料组织方式。", en: "Save exemplary round videos, topics, formats, teams, and years, then take timestamped Flow notes while watching." },
+  { source: "本地部署时可直接备份数据库文件。", en: "On a local deployment, back up the database file directly." },
+  { source: "比赛", en: "Matches" },
+  { source: "比赛 ·", en: "Matches ·" },
+  { source: "成员 ·", en: "Members ·" },
+  { source: "文档 ·", en: "Documents ·" },
+  { source: "补录比赛", en: "Add past match" },
+  { source: "操作记录", en: "Operation records" },
+  { source: "查看账号详情与操作", en: "View account details and actions" },
+  { source: "查看主机上的全部注册账号。密码采用单向哈希，管理员只能重置，不能查看原密码。", en: "View every registered account on this host. Passwords are one-way hashed; administrators can reset them but cannot view the originals." },
+  { source: "成员", en: "Members" },
+  { source: "创建、重命名、归档、切换", en: "Create, rename, archive, and switch" },
+  { source: "创建、重命名、归档工作区，并切换当前管理的工作区。当前：", en: "Create, rename, archive workspaces, and switch the workspace being managed. Current:" },
+  { source: "创建后你将成为其 OWNER。", en: "You will become its OWNER after creation." },
+  { source: "次 · in", en: "calls · in" },
+  { source: "从左侧选择一场录像。", en: "Select a recording from the left." },
+  { source: "打开已提交报告，或从待复盘列表继续填写。", en: "Open a submitted report or continue from the pending review list." },
+  { source: "待接受的邀请", en: "Pending invitations" },
+  { source: "当前工作区成员", en: "Current workspace members" },
+  { source: "当前生效的默认 AI 配置摘要；完整配置见「AI 配置」页。", en: "Summary of the active default AI configuration; see AI configuration for full details." },
+  { source: "导出", en: "Export" },
+  { source: "导入", en: "Import" },
+  { source: "到期", en: "Expires" },
+  { source: "点击进入各管理页面。", en: "Open an administration page." },
+  { source: "点击进入某场录像，查看内嵌视频并做笔记。", en: "Open a recording to watch its embedded video and take notes." },
+  { source: "对方掉点", en: "Opponent dropped point" },
+  { source: "发布队伍公告、配置注册开关、默认赛制与密码策略。当前工作区：", en: "Publish team announcements and configure registration, default format, and password policies. Current workspace:" },
+  { source: "服务器兜底", en: "Server fallback" },
+  { source: "各类 AI 任务的调用次数与 token 估算。", en: "Request counts and token estimates by AI task type." },
+  { source: "工作区 / 队伍管理", en: "Workspace / team management" },
+  { source: "工作区成员管理", en: "Workspace member management" },
+  { source: "公告、注册开关、密码策略", en: "Announcements, registration, and password policies" },
+  { source: "关键词", en: "Keyword" },
+  { source: "管理操作留痕", en: "Administration actions are audited" },
+  { source: "管理端的每一次写操作都会留痕。最近 150 条，倒序排列。当前工作区：", en: "Every administration write is audited. Showing the latest 150 in reverse order. Current workspace:" },
+  { source: "管理已有公告的发布状态。", en: "Manage publication status for existing announcements." },
+  { source: "规模", en: "Size" },
+  { source: "基于真实比赛与 AI 日志。当前工作区：", en: "Based on real matches and AI logs. Current workspace:" },
+  { source: "集中查看赛后数据、论点结果、evidence 表现与训练复盘。", en: "Review post-round data, argument outcomes, Evidence performance, and Practice reflections in one place." },
+  { source: "记录操作人、动作、对象与时间。", en: "Record the actor, action, object, and time." },
+  { source: "继续训练", en: "Resume Practice" },
+  { source: "结构化 evidence cards", en: "Structured Evidence cards" },
+  { source: "可邀请任意角色。", en: "Any role can be invited." },
+  { source: "客户端只能看到已启用项；同一时间恰有一套启用配置作为全局默认。", en: "Clients only see enabled configurations; exactly one enabled configuration is the global default at a time." },
+  { source: "离线", en: "Offline" },
+  { source: "立场 Side", en: "Side" },
+  { source: "轮发言", en: "speaking turns" },
+  { source: "论点 ·", en: "arguments ·" },
+  { source: "论点结果分布", en: "Argument outcome distribution" },
+  { source: "论点结果计数和占比", en: "Argument outcome counts and shares" },
+  { source: "没有可用的全局默认配置时使用。", en: "Used when no global default configuration is available." },
+  { source: "密码状态", en: "Password status" },
+  { source: "内容", en: "Content" },
+  { source: "你作为 OWNER / COACH 参与的工作区。", en: "Workspaces where you participate as OWNER / COACH." },
+  { source: "前往全局注册账号管理", en: "Go to global account management" },
+  { source: "清除", en: "Clear" },
+  { source: "全局 AI 配置", en: "Global AI configuration" },
+  { source: "全局 AI 用量", en: "Global AI usage" },
+  { source: "确认删除账号及其拥有的数据。", en: "Confirm deletion of the account and its owned data." },
+  { source: "赛事记录与复盘", en: "Match history and review" },
+  { source: "赛事统计只计算已提交的赛后报告；结果待定的比赛计入场次，但不进入胜率分母。", en: "Match statistics count only submitted post-round reports; pending results count as rounds but are excluded from win-rate denominators." },
+  { source: "赛制 Format", en: "Format" },
+  { source: "尚未注册接受的邀请；可随时撤销。", en: "Invitations not yet accepted by registered users; revoke them at any time." },
+  { source: "设置好题目、赛制、立场和模式后开始训练。训练界面保存完整对话历史并智能压缩上下文， 你也可以随时回到之前的训练继续练习。", en: "Choose a topic, format, side, and mode to start. Practice saves the full conversation and compresses context; resume any previous session at any time." },
+  { source: "生成邀请链接", en: "Generate invitation link" },
+  { source: "胜率、正反方表现、用量趋势", en: "Win rates, side performance, and usage trends" },
+  { source: "胜率拆分", en: "Win-rate breakdown" },
+  { source: "失守", en: "Lost" },
+  { source: "收藏外部优秀比赛录像，做 timestamped flow 笔记。录像团队共享，笔记每人私有。", en: "Save exemplary external round recordings and take timestamped Flow notes. Recordings are shared; notes are private." },
+  { source: "授予系统管理员", en: "Grant system administrator" },
+  { source: "输入完整邮箱", en: "Enter the full email address" },
+  { source: "数据备份 / 导入导出", en: "Data backup / import and export" },
+  { source: "数据库文件", en: "Database file" },
+  { source: "数量", en: "Count" },
+  { source: "搜索与筛选", en: "Search and filters" },
+  { source: "所有 AI route 都应写入 AIRequestLog；这里展示最近 10 条。", en: "Every AI route should write to AIRequestLog; the latest 10 entries appear here." },
+  { source: "添加全局 AI", en: "Add global AI" },
+  { source: "填写复盘", en: "Complete review" },
+  { source: "完成转点", en: "Completed turn" },
+  { source: "维护所有注册用户可选的 AI。启用的配置会出现在客户端，默认项用于自动回退。", en: "Maintain AI configurations available to all registered users. Enabled configurations appear in clients; the default is used for fallback." },
+  { source: "未设置", en: "Not set" },
+  { source: "我的工作区", en: "My workspaces" },
+  { source: "我方让步", en: "Our concession" },
+  { source: "无在线心跳", en: "No online heartbeat" },
+  { source: "系统管理员", en: "System administrator" },
+  { source: "系统设置", en: "System settings" },
+  { source: "下载 JSON 导出", en: "Download JSON export" },
+  { source: "下载文档、evidence、比赛记录、公告与成员名单的 JSON 快照。", en: "Download a JSON snapshot of documents, Evidence, match records, announcements, and members." },
+  { source: "先创建比赛，再进入比赛室。历史比赛可随时打开继续记录 flow。", en: "Create a match before entering its room. Reopen past matches to continue recording Flow." },
+  { source: "详情", en: "Details" },
+  { source: "项目根", en: "Project root" },
+  { source: "新建工作区", en: "New workspace" },
+  { source: "新增录像", en: "Add recording" },
+  { source: "选择一场比赛", en: "Choose a match" },
+  { source: "选择一场录像后，这里显示内嵌视频、元信息，以及你私有的 flow 笔记。", en: "After choosing a recording, this area shows the embedded video, metadata, and your private Flow notes." },
+  { source: "训练", en: "Practice" },
+  { source: "邀请、角色、重置密码、禁用/移除", en: "Invitations, roles, password resets, disable/remove" },
+  { source: "邀请成员、调整角色或移出当前工作区成员。全局账号与密码管理请前往注册账号页面。", en: "Invite members, adjust roles, or remove members from the current workspace. Use account management for global accounts and passwords." },
+  { source: "邀请新成员", en: "Invite new member" },
+  { source: "已保存的全局 AI（2）", en: "Saved global AI (2)" },
+  { source: "已发布的公告会显示在成员的用户端。", en: "Published announcements appear in the member workspace." },
+  { source: "已设置（不可查看）", en: "Set (cannot be viewed)" },
+  { source: "已提交报告", en: "Submitted reports" },
+  { source: "赢下", en: "Won" },
+  { source: "影响注册与密码策略。", en: "Affects registration and password policies." },
+  { source: "拥有数据", en: "Owned data" },
+  { source: "永久删除会清理该账号拥有的数据，且不可恢复。", en: "Permanent deletion removes all data owned by this account and cannot be undone." },
+  { source: "永久删除账号", en: "Permanently delete account" },
+  { source: "用备份文件覆盖原文件后重启即可。", en: "Replace the original file with the backup, then restart." },
+  { source: "允许自助注册（关闭后仅邀请可注册）", en: "Allow self-registration (only invitations can register when disabled)" },
+  { source: "在线状态取最近 30 秒内的真实客户端心跳。", en: "Online status uses real client heartbeats from the last 30 seconds." },
+  { source: "暂无待接受的邀请。", en: "No pending invitations." },
+  { source: "粘贴 YouTube / Vimeo 链接或任意视频 URL；标签用逗号分隔。", en: "Paste a YouTube / Vimeo link or any video URL; separate tags with commas." },
+  { source: "展示主机级全局与服务器兜底请求，不包含用户私有 AI。", en: "Shows host-level global and server-fallback requests, excluding private user AI." },
+  { source: "占比", en: "Share" },
+  { source: "账号列表（12）", en: "Accounts (12)" },
+  { source: "只显示最近 30 秒内仍有成员在线的房间。", en: "Show only rooms with a member online in the last 30 seconds." },
+  { source: "只有系统管理员可以查看此全局名单。", en: "Only system administrators can view this global list." },
+  { source: "重命名", en: "Rename" },
+  { source: "重置密码", en: "Reset password" },
+  { source: "注册时间", en: "Registered" },
+  { source: "注册账号管理", en: "Account management" },
+  { source: "总体胜率", en: "Overall win rate" },
+  { source: "最近在线", en: "Last online" },
+  { source: "AI 配置与审计", en: "AI configuration and audit" },
+  { source: "AI 用量（按任务类型）", en: "AI usage (by task type)" },
+  { source: "AI 用量概览", en: "AI usage overview" },
+  { source: "AI provider 状态", en: "AI provider status" },
+  { source: "Neg / Con 胜率", en: "Neg / Con win rate" },
+  { source: "OWNER 可调整角色或将成员移出当前 workspace。", en: "OWNER can adjust roles or remove members from the current workspace." },
+  { source: "SQLite 备份（本地运维）", en: "SQLite backup (local operations)" },
+  { source: "workspace / 环境 AI 的请求量与成本（不含成员私有 AI）。", en: "Workspace / environment AI request volume and cost (excluding private member AI)." },
+  { source: "workspace 资料文件", en: "Workspace documents" },
+  { source: "workspace AI 部署与用量审计", en: "Workspace AI deployment and usage audit" },
+  { source: "（由 DATABASE_URL 指定）。停止 dev server 后复制该文件即为完整备份。", en: "(Configured by DATABASE_URL). Stop the dev server and copy this file for a complete backup." },
+  { source: "导出当前工作区的结构化数据为 JSON；导入当前仅恢复文档与公告。当前工作区：", en: "Export structured data for the current workspace as JSON; import currently restores only documents and announcements. Current workspace:" },
+  { source: "队伍、权限、资料库与 AI 使用审计的总入口。当前工作区：", en: "The central place for teams, permissions, libraries, and AI usage audits. Current workspace:" },
+  { source: "结束日期", en: "End date" },
+  { source: "开始日期", en: "Start date" },
+  { source: "禁用账号", en: "Disable account" },
+  { source: "设为全局默认", en: "Set as global default" },
+  { source: "永久删除", en: "Permanently delete" },
+  { source: "Aff / Pro 胜率", en: "Aff / Pro win rate" }
 ];
 
 const termPairs: Array<[string, string]> = [
@@ -373,11 +626,138 @@ for (const entry of entries) {
   }
 }
 
+type DynamicEntry = {
+  patterns: RegExp[];
+  render: (match: RegExpMatchArray, mode: LanguageMode) => string;
+};
+
+const dynamicEntries: DynamicEntry[] = [
+  {
+    patterns: [/^(\d+) 场待复盘$/, /^(\d+) pending review$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} pending review` : `${match[1]} 场待复盘`
+  },
+  {
+    patterns: [/^已判定 (\d+) \/ (\d+) 场$/, /^(\d+) \/ (\d+) decided$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} / ${match[2]} decided` : `已判定 ${match[1]} / ${match[2]} 场`
+  },
+  {
+    patterns: [/^(\d+) 场已提交 · (\d+) 场已判定$/, /^(\d+) submitted · (\d+) decided$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} submitted · ${match[2]} decided` : `${match[1]} 场已提交 · ${match[2]} 场已判定`
+  },
+  {
+    patterns: [/^(\d+) 场比赛尚未提交赛后数据$/, /^(\d+) matches? pending review$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} ${match[1] === "1" ? "match" : "matches"} pending review` : `${match[1]} 场比赛尚未提交赛后数据`
+  },
+  {
+    patterns: [/^(\d+) 条筛选结果$/, /^(\d+) filtered results?$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} filtered ${match[1] === "1" ? "result" : "results"}` : `${match[1]} 条筛选结果`
+  },
+  {
+    patterns: [/^(\d+) 论点 · (\d+) evidence$/, /^(\d+) arguments? · (\d+) Evidence$/],
+    render: (match, mode) => mode === "en"
+      ? `${match[1]} ${match[1] === "1" ? "argument" : "arguments"} · ${match[2]} Evidence`
+      : mode === "zh-terms-en"
+        ? `${match[1]} 个 argument · ${match[2]} 条 Evidence`
+        : `${match[1]} 个论点 · ${match[2]} 条证据`
+  },
+  {
+    patterns: [/^赛后报告 · 第 (\d+) 版$/, /^Post-round report · version (\d+)$/],
+    render: (match, mode) => mode === "en" ? `Post-round report · version ${match[1]}` : `赛后报告 · 第 ${match[1]} 版`
+  },
+  {
+    patterns: [/^解析出 (\d+) 张卡片，检查后导入。$/, /^Parsed (\d+) cards?\. Review before importing\.$/],
+    render: (match, mode) => mode === "en"
+      ? `Parsed ${match[1]} ${match[1] === "1" ? "card" : "cards"}. Review before importing.`
+      : `解析出 ${match[1]} 张卡片，检查后导入。`
+  },
+  {
+    patterns: [/^已导入 (\d+) 张 evidence$/, /^Imported (\d+) Evidence cards?$/],
+    render: (match, mode) => mode === "en"
+      ? `Imported ${match[1]} Evidence ${match[1] === "1" ? "card" : "cards"}`
+      : mode === "zh-terms-en" ? `已导入 ${match[1]} 张 Evidence` : `已导入 ${match[1]} 张证据卡片`
+  },
+  {
+    patterns: [/^导入选中 \((\d+)\)$/, /^Import selected \((\d+)\)$/],
+    render: (match, mode) => mode === "en" ? `Import selected (${match[1]})` : `导入选中 (${match[1]})`
+  },
+  {
+    patterns: [/^第 (\d+) \/ (\d+) 段$/, /^Segment (\d+) \/ (\d+)$/],
+    render: (match, mode) => mode === "en" ? `Segment ${match[1]} / ${match[2]}` : `第 ${match[1]} / ${match[2]} 段`
+  },
+  {
+    patterns: [/^密码至少需要 (\d+) 位。$/, /^Password must be at least (\d+) characters\.$/],
+    render: (match, mode) => mode === "en" ? `Password must be at least ${match[1]} characters.` : `密码至少需要 ${match[1]} 位。`
+  },
+  {
+    patterns: [/^(\d+) 条笔记$/, /^(\d+) notes?$/],
+    render: (match, mode) => mode === "en"
+      ? `${match[1]} ${match[1] === "1" ? "note" : "notes"}`
+      : `${match[1]} 条笔记`
+  },
+  {
+    patterns: [/^(\d+)\/(\d+) 选中$/, /^(\d+)\/(\d+) selected$/],
+    render: (match, mode) => mode === "en" ? `${match[1]}/${match[2]} selected` : `${match[1]}/${match[2]} 选中`
+  },
+  {
+    patterns: [/^(\d+) 条已判定论点$/, /^(\d+) decided arguments?$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} decided arguments` : `${match[1]} 条已判定论点`
+  },
+  {
+    patterns: [/^(\d+) 条结构化记录$/, /^(\d+) structured records?$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} structured records` : `${match[1]} 条结构化记录`
+  },
+  {
+    patterns: [/^(\d+) 条已选 evidence$/, /^(\d+) selected Evidence$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} selected Evidence` : `${match[1]} 条已选 evidence`
+  },
+  {
+    patterns: [/^(\d+) 轮发言$/, /^(\d+) speaking turns?$/],
+    render: (match, mode) => mode === "en" ? `${match[1]} speaking turns` : `${match[1]} 轮发言`
+  },
+  {
+    patterns: [/^分数 (\d+)$/, /^Score (\d+)$/],
+    render: (match, mode) => mode === "en" ? `Score ${match[1]}` : `分数 ${match[1]}`
+  },
+  {
+    patterns: [/^(\d+) 次 · in (\d+) \/ out (\d+) · ([\d.]+)¢$/, /^(\d+) calls · in (\d+) \/ out (\d+) · ([\d.]+)¢$/],
+    render: (match, mode) => mode === "en"
+      ? `${match[1]} calls · in ${match[2]} / out ${match[3]} · ${match[4]}¢`
+      : `${match[1]} 次 · in ${match[2]} / out ${match[3]} · ${match[4]}¢`
+  },
+  {
+    patterns: [/^(\d{4})年(\d{1,2})月(\d{1,2})日$/, /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/],
+    render: (match, mode) => {
+      if (match[0].includes("年")) {
+        if (mode !== "en") return `${match[1]}年${match[2]}月${match[3]}日`;
+        return `${match[2]}/${match[3]}/${match[1]}`;
+      }
+      if (mode !== "en") return `${match[3]}年${match[1]}月${match[2]}日`;
+      return `${match[1]}/${match[2]}/${match[3]}`;
+    }
+  },
+  {
+    patterns: [/^已加入「(.+)」$/, /^Added “(.+)”$/],
+    render: (match, mode) => mode === "en" ? `Added “${match[1]}”` : `已加入「${match[1]}」`
+  }
+];
+
+function translateDynamicText(core: string, mode: LanguageMode) {
+  for (const entry of dynamicEntries) {
+    for (const pattern of entry.patterns) {
+      const match = core.match(pattern);
+      if (match) return entry.render(match, mode);
+    }
+  }
+  return null;
+}
+
 export function translateSystemText(value: string, mode: LanguageMode): string {
   const leading = value.match(/^\s*/)?.[0] ?? "";
   const trailing = value.match(/\s*$/)?.[0] ?? "";
   const core = value.trim();
   if (!core) return value;
+  const dynamic = translateDynamicText(core, mode);
+  if (dynamic) return `${leading}${dynamic}${trailing}`;
   const counted = /^(.*?)[（(](\d+)[）)]$/.exec(core);
   if (counted) {
     const translatedLabel = translateSystemText(counted[1]!, mode);

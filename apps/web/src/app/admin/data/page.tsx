@@ -24,7 +24,7 @@ export default async function AdminDataPage({
       <section className="hero">
         <div className="eyebrow">Data</div>
         <h1>数据备份 / 导入导出</h1>
-        <p>导出当前工作区的结构化数据为 JSON；导入当前仅恢复文档与公告。当前工作区：{session.workspace.name}。</p>
+        <p>导出当前工作区的结构化数据为 JSON；导入当前仅恢复文档与公告。当前工作区：<span data-language-raw>{session.workspace.name}</span>。</p>
       </section>
 
       {errorMessage ? <p className="empty-state">{errorMessage}</p> : null}

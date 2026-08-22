@@ -38,8 +38,9 @@ export function PracticeHistory({ sessions }: PracticeHistoryProps) {
           <div className="practice-history-main">
             <strong data-language-raw>{item.topic}</strong>
             <p className="practice-history-meta">
-              {item.format} · {item.side} · {item.mode} · {item.turns} 轮发言
-              {item.score ? ` · 分数 ${item.score}` : ""}
+              <span data-language-raw>{item.format} · {item.side} · {item.mode}</span>
+              {" · "}{item.turns + " 轮发言"}
+              {item.score ? <>{" · "}{"分数 " + item.score}</> : null}
             </p>
             {formatDate(item.createdAt, locale) ? (
               <p className="practice-history-date">{formatDate(item.createdAt, locale)}</p>

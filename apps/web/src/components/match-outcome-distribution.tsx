@@ -18,7 +18,7 @@ export function MatchOutcomeDistribution({ outcomes }: MatchOutcomeDistributionP
       <div className="section-title">
         <div>
           <h2 id="outcome-distribution-title">论点结果分布</h2>
-          <p>{outcomes.total} 条已判定论点</p>
+          <p>{`${outcomes.total} 条已判定论点`}</p>
         </div>
       </div>
       {outcomes.total ? (
