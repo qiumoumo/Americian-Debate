@@ -3966,7 +3966,7 @@ select:-webkit-autofill {
 .language-segments {
   position: relative;
   grid-template-columns: repeat(3, minmax(48px, 1fr));
-  width: min(100%, 184px);
+  width: min(100%, 196px);
   gap: 0;
   padding: 3px;
   overflow: hidden;
@@ -3990,8 +3990,12 @@ select:-webkit-autofill {
 .language-segment {
   position: relative;
   z-index: 1;
+  min-width: 0;
   border: 0;
   background: transparent;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  padding-inline: 4px;
   transition: color 220ms ease, transform 220ms ease;
 }
 
@@ -4119,7 +4123,7 @@ select:-webkit-autofill {
 @media (max-width: 720px) {
   .language-segments {
     grid-template-columns: repeat(3, minmax(42px, 1fr));
-    width: 168px;
+    width: 184px;
   }
 
   .language-loading-overlay {
