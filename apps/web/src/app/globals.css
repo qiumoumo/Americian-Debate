@@ -4255,6 +4255,45 @@ select:-webkit-autofill {
 }
 
 /* Refined palette and proportion pass for the shared-document landing view. */
+.main .document-index { width: min(1000px, 100%); }
+.main .document-index .document-index-head { min-height: 196px; padding: 28px 32px 26px; border-color: #d2d9e5; border-radius: 14px 14px 0 0; background: #e9eef7; color: #1f2a44; box-shadow: 0 14px 30px rgb(31 42 68 / 8%); }
+.main .document-index .document-index-head::before { background-image: linear-gradient(90deg, rgb(31 42 68 / 6%) 1px, transparent 1px), linear-gradient(rgb(31 42 68 / 6%) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.55; }
+.main .document-index .document-index-title-block { min-height: 138px; }
+.main .document-index .document-index-kicker { color: #63718c; }
+.main .document-index .document-index-kicker-dot { background: #df7a62; box-shadow: 0 0 0 4px rgb(223 122 98 / 16%); }
+.main .document-index .document-index-head h1 { margin: 0; color: #1f2a44; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -0.075em; }
+.main .document-index .document-index-title-block p { color: #63718c; font-size: 0.92rem; }
+.main .document-index .document-index-head-action { gap: 18px; }
+.main .document-index .document-index-count { color: #63718c; }
+.main .document-index .document-index-count strong { color: #1f2a44; font-size: 2.1rem; }
+.main .document-index .document-create-button { border-color: #df7a62; color: #fffaf7; background: #df7a62; box-shadow: 4px 4px 0 rgb(31 42 68 / 14%); }
+.main .document-index .document-create-button:hover:not(:disabled), .main .document-index .document-create-button:focus-visible { border-color: #ef9b84; color: #fff; background: #ef9b84; box-shadow: 2px 2px 0 rgb(31 42 68 / 16%); }
+.main .document-index .document-list-head { border-color: #d2d9e5; background: #fff; color: #8792a5; }
+.main .document-index .document-list { min-height: calc(100vh - 430px); border-color: #d2d9e5; border-radius: 0 0 14px 14px; background: #fff; box-shadow: 0 18px 34px rgb(31 42 68 / 6%); }
+.main .document-index .document-list-row { min-height: 104px; padding: 20px 20px 20px 14px; border-bottom-color: #e3e7ee; }
+.main .document-index .document-list-row:hover { padding-left: 20px; background: #fbf4ef; }
+.main .document-index .document-list-row::after { background: #df7a62; }
+.main .document-index .document-row-number { color: #9aa4b5; }
+.main .document-index .document-list-copy strong { color: #1f2a44; }
+.main .document-index .document-list-copy p { color: #748097; }
+.main .document-index .document-list-meta { color: #9aa4b5; }
+.main .document-index .document-updated-at { color: #748097; }
+.main .document-index .document-evidence-count { color: #42526f; }
+.main .document-index .document-evidence-dot { background: #df7a62; }
+.main .document-index .document-open-button { border-color: #2f4269; background: #2f4269; color: #fff; }
+.main .document-index .document-open-button:hover:not(:disabled), .main .document-index .document-open-button:focus-visible { border-color: #1f2a44; background: #1f2a44; color: #fff; }
+.main .document-index .document-list-empty { min-height: calc(100vh - 540px); border-bottom: 0; background: #fff; }
+.main .document-index .document-empty-mark { color: #2f4269; }
+.main .document-index .document-list-empty strong { color: #1f2a44; }
+.main .document-index .document-list-empty p { color: #748097; }
+.main .document-index .document-list-empty .button { border-color: #d2d9e5; color: #2f4269; background: #fff; }
+.main .document-index .document-list-empty .button:hover:not(:disabled), .main .document-index .document-list-empty .button:focus-visible { border-color: #df7a62; color: #b45743; background: #fff8f4; }
+@media (max-width: 720px) {
+  .main .document-index .document-index-head { padding: 24px 20px 22px; border-radius: 12px 12px 0 0; }
+  .main .document-index .document-index-title-block { min-height: 170px; }
+  .main .document-index .document-list { min-height: calc(100vh - 380px); border-radius: 0 0 12px 12px; }
+  .main .document-index .document-list-empty { min-height: calc(100vh - 480px); }
+}
 .document-index { width: min(1000px, 100%); }
 .document-index-head {
   min-height: 196px;
