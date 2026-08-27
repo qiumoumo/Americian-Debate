@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import {
   createDocumentRecord,
   documentActorFromSession,
+  restoreDocumentRecord,
   saveDocumentRecord,
   softDeleteDocumentRecord
 } from "@/lib/documents";
@@ -26,6 +27,7 @@ function actionError(error: unknown, fallback: string): DocumentActionResult {
 
 export async function createDocument(formData: FormData): Promise<DocumentActionResult> {
   const title = value(formData, "title").trim();
+  const visibility = value(formData, "visibility");
   if (!title) {
     return { ok: false, message: "请填写文档标题。", fieldErrors: { title: "文档标题不能为空。" } };
   }
@@ -34,7 +36,8 @@ export async function createDocument(formData: FormData): Promise<DocumentAction
     const session = await requireUser();
     const created = await createDocumentRecord(documentActorFromSession(session), {
       title,
-      description: value(formData, "description")
+      description: value(formData, "description"),
+      visibility: visibility === "PERSONAL" ? "PERSONAL" : "GLOBAL"
     });
     revalidatePath("/app/documents");
     return { ok: true, documentId: created.id, message: "文档已创建。" };
@@ -46,6 +49,7 @@ export async function createDocument(formData: FormData): Promise<DocumentAction
 export async function saveDocument(formData: FormData): Promise<DocumentActionResult> {
   const documentId = value(formData, "documentId").trim();
   const title = value(formData, "title").trim();
+  const visibility = value(formData, "visibility");
   if (!documentId) return { ok: false, message: "缺少文档 ID。" };
   if (!title) {
     return { ok: false, message: "请填写文档标题。", fieldErrors: { title: "文档标题不能为空。" } };
@@ -56,7 +60,8 @@ export async function saveDocument(formData: FormData): Promise<DocumentActionRe
     await saveDocumentRecord(documentActorFromSession(session), documentId, {
       title,
       description: value(formData, "description"),
-      content: value(formData, "content")
+      content: value(formData, "content"),
+      visibility: visibility === "PERSONAL" ? "PERSONAL" : "GLOBAL"
     });
     revalidatePath("/app/documents");
     revalidatePath(`/app/documents/${documentId}`);
@@ -77,5 +82,19 @@ export async function deleteDocument(formData: FormData): Promise<DocumentAction
     return { ok: true, documentId, message: "文档已删除。" };
   } catch (error) {
     return actionError(error, "文档删除失败。");
+  }
+}
+
+export async function restoreDocument(formData: FormData): Promise<DocumentActionResult> {
+  const documentId = value(formData, "documentId").trim();
+  if (!documentId) return { ok: false, message: "缺少文档 ID。" };
+
+  try {
+    const session = await requireUser();
+    await restoreDocumentRecord(documentActorFromSession(session), documentId);
+    revalidatePath("/app/documents");
+    return { ok: true, documentId, message: "文档已恢复。" };
+  } catch (error) {
+    return actionError(error, "文档恢复失败。");
   }
 }

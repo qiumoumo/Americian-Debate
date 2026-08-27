@@ -1,4 +1,4 @@
-import { db, type Role } from "@debate/db";
+import { db, type DocumentVisibility, type Role } from "@debate/db";
 import { createPlainTextDocument } from "@debate/editor";
 import { mapDocument } from "./mappers.ts";
 
@@ -12,10 +12,15 @@ export interface DocumentActor {
 export interface DocumentDraft {
   title: string;
   description: string;
+  visibility?: DocumentVisibility;
 }
 
 export interface DocumentContentDraft extends DocumentDraft {
   content: string;
+}
+
+function normalizeVisibility(value: string | DocumentVisibility | undefined): DocumentVisibility {
+  return value === "PERSONAL" ? "PERSONAL" : "GLOBAL";
 }
 
 export function documentActorFromSession(session: {
@@ -47,7 +52,12 @@ function requiredTitle(value: string) {
 
 async function findActiveDocument(actor: DocumentActor, documentId: string) {
   const document = await db.document.findFirst({
-    where: { id: documentId, workspaceId: actor.workspaceId, deletedAt: null },
+    where: {
+      id: documentId,
+      workspaceId: actor.workspaceId,
+      deletedAt: null,
+      OR: [{ visibility: "GLOBAL" }, { visibility: "PERSONAL", ownerId: actor.userId }]
+    },
     include: { evidence: { orderBy: { createdAt: "desc" } } }
   });
   if (!document) throw new Error("文档不存在或不属于当前工作区");
@@ -73,6 +83,7 @@ export async function createDocumentRecord(actor: DocumentActor, input: Document
       ownerId: actor.userId,
       title: requiredTitle(input.title),
       description: input.description.trim(),
+      visibility: normalizeVisibility(input.visibility),
       contentJson: { type: "doc", content: [] }
     },
     select: { id: true }
@@ -91,6 +102,7 @@ export async function saveDocumentRecord(actor: DocumentActor, documentId: strin
     data: {
       title: requiredTitle(input.title),
       description: input.description.trim(),
+      visibility: normalizeVisibility(input.visibility),
       contentJson: JSON.parse(JSON.stringify(createPlainTextDocument(input.content)))
     }
   });
@@ -104,4 +116,19 @@ export async function softDeleteDocumentRecord(actor: DocumentActor, documentId:
     data: { deletedAt: new Date() }
   });
   if (result.count !== 1) throw new Error("文档删除失败");
+}
+
+export async function restoreDocumentRecord(actor: DocumentActor, documentId: string) {
+  const cutoff = new Date(Date.now() - 5_000);
+  const document = await db.document.findFirst({
+    where: { id: documentId, workspaceId: actor.workspaceId, deletedAt: { gte: cutoff } },
+    select: { ownerId: true }
+  });
+  if (!document) throw new Error("撤回窗口已结束，这份文档无法恢复");
+  if (!canDeleteDocument(actor, document.ownerId)) throw new Error("没有恢复这份文档的权限");
+  const result = await db.document.updateMany({
+    where: { id: documentId, workspaceId: actor.workspaceId, deletedAt: { gte: cutoff } },
+    data: { deletedAt: null }
+  });
+  if (result.count !== 1) throw new Error("文档恢复失败");
 }

@@ -30,6 +30,7 @@ export interface DebateDocument {
   id: string;
   title: string;
   description: string;
+  visibility: "GLOBAL" | "PERSONAL";
   contentText?: string;
   updatedAt: string;
   evidence: Evidence[];
@@ -538,6 +539,7 @@ export const sampleDocuments: DebateDocument[] = [
     id: "doc-immigration-econ",
     title: "Immigration Econ Core File",
     description: "Economic growth, labor supply, and local fiscal impact evidence.",
+    visibility: "GLOBAL",
     updatedAt: "2026-07-02",
     permissions: ["owner", "editor"],
     evidence: [
@@ -573,6 +575,7 @@ export const sampleDocuments: DebateDocument[] = [
     id: "doc-ai-regulation",
     title: "AI Regulation Blocks",
     description: "Safety, innovation, compute governance, and international competition blocks.",
+    visibility: "GLOBAL",
     updatedAt: "2026-06-29",
     permissions: ["viewer"],
     evidence: [

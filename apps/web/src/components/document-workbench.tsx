@@ -16,6 +16,7 @@ interface EditableDocument {
   id: string;
   title: string;
   description: string;
+  visibility: "GLOBAL" | "PERSONAL";
   contentText?: string;
   updatedAt: string;
   evidence: Evidence[];
@@ -165,6 +166,7 @@ export function DocumentWorkbench({ document, canEdit }: DocumentWorkbenchProps)
   const router = useRouter();
   const [title, setTitle] = useState(document.title);
   const [description, setDescription] = useState(document.description);
+  const [visibility, setVisibility] = useState(document.visibility);
   const [content, setContent] = useState(document.contentText ?? "");
   const [dirty, setDirty] = useState(false);
   const [result, setResult] = useState(emptyResult);
@@ -216,9 +218,10 @@ export function DocumentWorkbench({ document, canEdit }: DocumentWorkbenchProps)
           </header>
           <input type="hidden" name="documentId" value={document.id} />
           <fieldset disabled={!canEdit || pending}>
-            <div className="document-meta-fields">
+          <div className="document-meta-fields">
               <label className="field"><span>标题</span><input name="title" value={title} required onChange={(event) => markChanged(() => setTitle(event.target.value))} /></label>
               <label className="field"><span>描述</span><textarea name="description" value={description} rows={2} onChange={(event) => markChanged(() => setDescription(event.target.value))} /></label>
+              <label className="field"><span>可见范围</span><select name="visibility" value={visibility} onChange={(event) => markChanged(() => setVisibility(event.target.value as "GLOBAL" | "PERSONAL"))}><option value="GLOBAL">全局（当前工作区成员可见）</option><option value="PERSONAL">个人（仅自己可见）</option></select></label>
             </div>
             <label className="field document-body-field">
               <span>正文</span>

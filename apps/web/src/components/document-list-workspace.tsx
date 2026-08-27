@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createDocument, deleteDocument, type DocumentActionResult } from "@/app/app/documents/actions";
+import { createDocument, deleteDocument, restoreDocument, type DocumentActionResult } from "@/app/app/documents/actions";
 import { ReliableLink } from "@/components/reliable-link";
 
 interface DocumentListItem {
@@ -11,6 +11,7 @@ interface DocumentListItem {
   description: string;
   updatedAt: string;
   evidenceCount: number;
+  visibility: "GLOBAL" | "PERSONAL";
   canDelete: boolean;
 }
 
@@ -61,6 +62,14 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
   const [deleteTarget, setDeleteTarget] = useState<DocumentListItem | null>(null);
   const [deleteResult, setDeleteResult] = useState(emptyResult);
   const [deletePending, startDelete] = useTransition();
+  const [undoTarget, setUndoTarget] = useState<DocumentListItem | null>(null);
+  const [undoPending, startUndo] = useTransition();
+
+  useEffect(() => {
+    if (!undoTarget) return;
+    const timer = window.setTimeout(() => setUndoTarget(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [undoTarget]);
 
   useEffect(() => {
     if (creating) titleInput.current?.focus();
@@ -84,6 +93,7 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
       const result = await deleteDocument(formData);
       setDeleteResult(result);
       if (result.ok) {
+        setUndoTarget(deleteTarget);
         setDeleteTarget(null);
         router.refresh();
       }
@@ -104,10 +114,6 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
         </div>
       </header>
 
-      {deleteResult.ok && deleteResult.message ? (
-        <p className="success-text" role="status" aria-live="polite">{deleteResult.message}</p>
-      ) : null}
-
       <div className="document-list-head" aria-hidden="true"><span>DOCUMENTS / {String(documents.length).padStart(2, "0")}</span><span>最近更新</span></div>
       <div className="document-list" aria-label="文档列表">
         {documents.map((document, index) => (
@@ -115,6 +121,7 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
             <span className="document-row-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <div className="document-list-copy">
               <strong data-language-raw>{document.title}</strong>
+              <span className={`document-visibility-badge document-visibility-${document.visibility.toLowerCase()}`}>{document.visibility === "PERSONAL" ? "个人" : "全局"}</span>
               {document.description ? <p data-language-raw>{document.description}</p> : <p className="empty-state">暂无描述</p>}
             </div>
             <div className="document-list-meta"><span className="document-updated-at">{document.updatedAt}</span><span className="document-evidence-count"><span className="document-evidence-dot" aria-hidden="true" /><span data-language-raw>{document.evidenceCount}</span> 条证据</span></div>
@@ -136,6 +143,7 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
               {createResult.fieldErrors?.title ? <small className="error-text">{createResult.fieldErrors.title}</small> : null}
             </label>
             <label className="field"><span>描述</span><textarea name="description" rows={3} placeholder="这份资料主要覆盖哪些论点？" /></label>
+            <label className="field"><span>可见范围</span><select name="visibility" defaultValue="GLOBAL"><option value="GLOBAL">全局（当前工作区成员可见）</option><option value="PERSONAL">个人（仅自己可见）</option></select></label>
             {createResult.message && !createResult.ok ? <p className="status-error" role="alert">{createResult.message}</p> : null}
             <div className="document-modal-actions">
               <button className="button" type="button" onClick={() => setCreating(false)} disabled={createPending}>取消</button>
@@ -155,6 +163,22 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
             <button className="button danger" type="button" onClick={confirmDelete} disabled={deletePending}>{deletePending ? "删除中..." : "确认删除"}</button>
           </div>
         </ModalFrame>
+      ) : null}
+
+      {undoTarget ? (
+        <div className="document-delete-toast" role="status" aria-live="polite">
+          <div><strong>文档已删除</strong><span data-language-raw>{undoTarget.title}</span></div>
+          <button className="document-undo-button" type="button" disabled={undoPending} onClick={() => {
+            const formData = new FormData();
+            formData.set("documentId", undoTarget.id);
+            startUndo(async () => {
+              const result = await restoreDocument(formData);
+              if (result.ok) setUndoTarget(null);
+              else setDeleteResult(result);
+            });
+          }}>{undoPending ? "恢复中..." : "撤回"}</button>
+          <span className="document-delete-toast-timer">5s</span>
+        </div>
       ) : null}
     </section>
   );

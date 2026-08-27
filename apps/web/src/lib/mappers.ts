@@ -111,6 +111,7 @@ export function mapDocument(record: {
   id: string;
   title: string;
   description: string;
+  visibility: "GLOBAL" | "PERSONAL";
   contentJson: unknown;
   updatedAt: Date;
   evidence: Parameters<typeof mapEvidence>[0][];
@@ -119,6 +120,7 @@ export function mapDocument(record: {
     id: record.id,
     title: record.title,
     description: record.description,
+    visibility: record.visibility,
     contentText: readPlainTextDocument(record.contentJson),
     updatedAt: record.updatedAt.toISOString().slice(0, 10),
     evidence: record.evidence.map(mapEvidence),

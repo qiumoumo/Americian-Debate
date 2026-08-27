@@ -7,7 +7,7 @@ import { sessionShellUser } from "@/lib/session-props";
 
 export default async function DocumentsPage() {
   const session = await requireUser();
-  const documents = await getDocumentsForWorkspace(session.workspace.id);
+  const documents = await getDocumentsForWorkspace(session.workspace.id, session.user.id);
   const actor = documentActorFromSession(session);
 
   return (
@@ -22,6 +22,7 @@ export default async function DocumentsPage() {
           id: document.id,
           title: document.title,
           description: document.description,
+          visibility: document.visibility,
           updatedAt: document.updatedAt,
           evidenceCount: document.evidence.length,
           canDelete: canDeleteDocument(actor, document.ownerId)

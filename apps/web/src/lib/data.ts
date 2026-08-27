@@ -3,9 +3,9 @@ import type { FlowColumn, PracticeSessionSummary } from "@debate/shared";
 import { mapDocument, mapEvidence, mapFlowRow, mapLibraryRound, mapPrismaFormat, mapPrismaSide, readStringArray } from "./mappers.ts";
 import { getMatchHistory } from "./match-reports.ts";
 
-export async function getDocumentsForWorkspace(workspaceId: string) {
+export async function getDocumentsForWorkspace(workspaceId: string, userId: string) {
   const documents = await db.document.findMany({
-    where: { workspaceId, deletedAt: null },
+    where: { workspaceId, deletedAt: null, OR: [{ visibility: "GLOBAL" }, { visibility: "PERSONAL", ownerId: userId }] },
     include: { evidence: { orderBy: { createdAt: "desc" } } },
     orderBy: { updatedAt: "desc" }
   });
@@ -26,8 +26,8 @@ export async function getEvidenceForWorkspace({
 }) {
   const evidence = await db.evidence.findMany({
     where: scope === "global"
-      ? { document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } }
-      : { document: { workspaceId, deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } },
+      ? { document: { visibility: "GLOBAL", deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } }
+      : { document: { workspaceId, deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null }, OR: [{ visibility: "GLOBAL" }, { visibility: "PERSONAL", ownerId: userId }] } },
     include: { document: { include: { owner: true, workspace: true } } },
     orderBy: { updatedAt: "desc" }
   });

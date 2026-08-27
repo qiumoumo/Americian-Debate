@@ -71,6 +71,11 @@ enum AIConfigScope {
   PERSONAL
 }
 
+enum DocumentVisibility {
+  GLOBAL
+  PERSONAL
+}
+
 enum AISelectionMode {
   AUTO
   CONFIG
@@ -288,6 +293,7 @@ model Document {
   ownerId     String
   title       String
   description String               @default("")
+  visibility  DocumentVisibility   @default(GLOBAL)
   contentJson Json
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
