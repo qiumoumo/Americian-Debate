@@ -97,6 +97,10 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
         {canCreate ? <button className="button primary" type="button" onClick={() => { setCreateResult(emptyResult); setCreating(true); }}>新建文档</button> : <span className="pill">只读</span>}
       </header>
 
+      {deleteResult.ok && deleteResult.message ? (
+        <p className="success-text" role="status" aria-live="polite">{deleteResult.message}</p>
+      ) : null}
+
       <div className="document-list" aria-label="文档列表">
         {documents.map((document) => (
           <article className="document-list-row" key={document.id}>
