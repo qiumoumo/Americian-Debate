@@ -14,7 +14,7 @@ interface GlitchCell {
   color: string;
 }
 
-const DEFAULT_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789论证证据反驳立论质询总结";
+const DEFAULT_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const DEFAULT_GLITCH_COLORS = ["#456c58", "#8fa998", "#b57932"];
 
 export function LetterGlitchBackground({

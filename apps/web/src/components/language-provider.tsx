@@ -34,7 +34,7 @@ export function useLanguage() {
 
 function setDocumentLanguage(mode: LanguageMode, globalMode: LanguageMode) {
   document.documentElement.lang = languageHtmlTag(globalMode);
-  document.querySelectorAll<HTMLElement>("main.main, main.login-shell").forEach((element) => {
+  document.querySelectorAll<HTMLElement>("main.main, main.login-shell, main.auth-page, main.start-page").forEach((element) => {
     element.lang = languageHtmlTag(mode);
   });
   document.querySelectorAll<HTMLElement>("aside.sidebar").forEach((element) => {
@@ -81,7 +81,7 @@ async function translateDocument(
   setDocumentLanguage(mode, globalMode);
   const tasks = [
     ...Array.from(document.querySelectorAll<HTMLElement>("aside.sidebar"), (root) => translationTasks(root, globalMode)),
-    ...Array.from(document.querySelectorAll<HTMLElement>("main.main, main.login-shell"), (root) => translationTasks(root, mode))
+    ...Array.from(document.querySelectorAll<HTMLElement>("main.main, main.login-shell, main.auth-page, main.start-page"), (root) => translationTasks(root, mode))
   ].flat();
   for (let index = 0; index < tasks.length; index += LANGUAGE_TRANSLATION_BATCH_SIZE) {
     if (!isCurrent()) return;
@@ -95,8 +95,8 @@ async function translateDocument(
 function translateAddedNode(node: Node, mode: LanguageMode, globalMode: LanguageMode) {
   if (node.parentElement?.closest("[data-language-ignore], [data-language-raw]")) return;
   const targetMode = (node instanceof Element
-    ? node.closest("main.main, main.login-shell")
-    : node.parentElement?.closest("main.main, main.login-shell"))
+    ? node.closest("main.main, main.login-shell, main.auth-page, main.start-page")
+    : node.parentElement?.closest("main.main, main.login-shell, main.auth-page, main.start-page"))
     ? mode
     : globalMode;
   if (node.nodeType === Node.TEXT_NODE) {
@@ -191,7 +191,7 @@ export function LanguageProvider({ initialPreferences, children }: {
         if (mutation.type === "characterData") {
           const node = mutation.target;
           if (node.parentElement?.closest("[data-language-ignore], [data-language-raw], pre, code, textarea, [contenteditable='true']")) continue;
-          const nodeMode = node.parentElement?.closest("main.main, main.login-shell") ? activeMode : preferences.globalMode;
+          const nodeMode = node.parentElement?.closest("main.main, main.login-shell, main.auth-page, main.start-page") ? activeMode : preferences.globalMode;
           translateTextNode(node, nodeMode);
           continue;
         }

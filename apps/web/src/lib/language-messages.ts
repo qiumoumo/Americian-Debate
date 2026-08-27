@@ -28,7 +28,10 @@ const entries: Entry[] = [
   { source: "辩论资料、比赛和训练，一个本地优先的工作台。", en: "Debate materials, rounds, and practice in one local-first workspace." },
   { source: "辩论资料、比赛和 Practice，一个本地优先的工作台。", en: "Debate materials, rounds, and practice in one local-first workspace.", zh: "辩论资料、比赛和训练，一个本地优先的工作台。", hybrid: "辩论资料、比赛和 Practice，一个本地优先的工作台。" },
   { source: "进入用户端", en: "Open user workspace" },
+  { source: "进入工作台", en: "Open workspace" },
   { source: "功能说明", en: "About the product" },
+  { source: "American Debate Workspace", en: "American Debate Workspace" },
+  { source: "把资料、论证、比赛和训练放进同一个清晰、可靠的辩论工作区。", en: "Keep materials, arguments, rounds, and practice in one clear, reliable debate workspace." },
   { source: "关于美辩", en: "About Debate Suite" },
   { source: "美辩是一个本地优先的美式辩论工作台：资料、比赛、训练与复盘，配合可替换的 AI 与网站管理端。", en: "Debate Suite is a local-first workspace for materials, rounds, Practice, and review, with replaceable AI and administration." },
   { source: "模块", en: "Modules" },
@@ -56,6 +59,9 @@ const entries: Entry[] = [
   { source: "登录", en: "Sign in" },
   { source: "登录账号", en: "Sign in to your account" },
   { source: "用户端登录", en: "User sign in" },
+  { source: "回到你的辩论工作区", en: "Return to your debate workspace" },
+  { source: "资料库、比赛房间、训练与复盘，登录后从上次的目标继续。", en: "Access your library, match rooms, practice, and review, then continue where you left off." },
+  { source: "使用邮箱和密码继续。", en: "Continue with your email and password." },
   { source: "登录管理端", en: "Sign in to administration" },
   { source: "管理员登录", en: "Administrator sign in" },
   { source: "创建账号", en: "Create account" },
@@ -67,6 +73,14 @@ const entries: Entry[] = [
   { source: "姓名", en: "Name" },
   { source: "邮箱", en: "Email" },
   { source: "密码", en: "Password" },
+  { source: "输入密码", en: "Enter your password" },
+  { source: "你的姓名", en: "Your name" },
+  { source: "创建密码", en: "Create a password" },
+  { source: "注册并进入", en: "Register and enter" },
+  { source: "邮箱将作为登录账号。", en: "Your email will be your sign-in account." },
+  { source: "建立你的辩论工作区", en: "Build your debate workspace" },
+  { source: "注册后自动创建个人工作区，马上开始整理资料和训练。", en: "Registration creates a personal workspace so you can organize materials and practice right away." },
+  { source: "邀请链接无效或已过期。", en: "This invitation link is invalid or has expired." },
   { source: "新密码", en: "New password" },
   { source: "确认新密码", en: "Confirm new password" },
   { source: "更换密码", en: "Change password" },
@@ -74,8 +88,14 @@ const entries: Entry[] = [
   { source: "退出登录", en: "Sign out" },
   { source: "去登录", en: "Go to sign in" },
   { source: "邮箱或密码不正确。", en: "The email or password is incorrect." },
+  { source: "尝试次数过多，请稍后再试。", en: "Too many attempts. Please try again later." },
+  { source: "请填写姓名、有效邮箱。", en: "Please provide your name and a valid email." },
+  { source: "该邮箱已注册，请直接登录。", en: "That email is already registered. Please sign in." },
+  { source: "注册失败，请重试。", en: "Registration failed. Please try again." },
+  { source: "密码至少需要", en: "Password must be at least" },
   { source: "使用邮箱和密码进入资料库、比赛房间、Practice 和用户设置。", en: "Use your email and password to access documents, match rooms, Practice, and settings." },
   { source: "共享文档", en: "Shared documents" },
+  { source: "把辩题、论证与证据整理成一份可共同推进的工作底稿。", en: "Organize resolutions, arguments, and Evidence into a working file your team can move forward together." },
   { source: "Shared Documents", en: "Shared Documents", zh: "共享文档", hybrid: "共享文档" },
   { source: "文档与 evidence 已从静态 mock 改为本地数据库读写。Evidence 从第一天就结构化保存，方便比赛、AI 引用和统计复用。", en: "Documents and Evidence now use the local database. Evidence is stored in a structured form for rounds, AI citations, and analytics." },
   { source: "队伍公告", en: "Team announcements" },
@@ -165,6 +185,16 @@ const entries: Entry[] = [
   { source: "取消", en: "Cancel" },
   { source: "条证据", en: "Evidence cards" },
   { source: "暂无描述", en: "No description" },
+  { source: "份文档", en: "documents" },
+  { source: "最近更新", en: "Recently updated" },
+  { source: "还没有文档", en: "No documents yet" },
+  { source: "从一份新的辩题工作底稿开始。", en: "Start with a new debate working file." },
+  { source: "创建第一份文档", en: "Create your first document" },
+  { source: "个人", en: "Personal" },
+  { source: "全局", en: "Workspace-wide" },
+  { source: "文档已删除", en: "Document deleted" },
+  { source: "文档已恢复", en: "Document restored" },
+  { source: "恢复中...", en: "Restoring..." },
   { source: "确定删除这份文档吗？文档会从共享列表和证据检索中隐藏。", en: "Delete this document? It will be hidden from shared documents and Evidence search." },
   { source: "确认删除", en: "Delete document" },
   { source: "删除中...", en: "Deleting..." },
@@ -673,6 +703,18 @@ type DynamicEntry = {
 };
 
 const dynamicEntries: DynamicEntry[] = [
+  {
+    patterns: [/^密码（至少 (\d+) 位）$/, /^Password \(at least (\d+) characters\)$/],
+    render: (match, mode) => mode === "en" ? `Password (at least ${match[1]} characters)` : `密码（至少 ${match[1]} 位）`
+  },
+  {
+    patterns: [/^加入「(.+)」$/, /^Join “(.+)”$/],
+    render: (match, mode) => mode === "en" ? `Join “${match[1]}”` : `加入「${match[1]}」`
+  },
+  {
+    patterns: [/^你将以 (.+) 身份加入团队，注册后即可继续。$/, /^You will join the team as (.+) and continue after registering\.$/],
+    render: (match, mode) => mode === "en" ? `You will join the team as ${match[1]} and continue after registering.` : `你将以 ${match[1]} 身份加入团队，注册后即可继续。`
+  },
   {
     patterns: [/^(\d+) 场待复盘$/, /^(\d+) pending review$/],
     render: (match, mode) => mode === "en" ? `${match[1]} pending review` : `${match[1]} 场待复盘`
