@@ -63,12 +63,22 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
   const [deleteResult, setDeleteResult] = useState(emptyResult);
   const [deletePending, startDelete] = useTransition();
   const [undoTarget, setUndoTarget] = useState<DocumentListItem | null>(null);
+  const [undoSeconds, setUndoSeconds] = useState(5);
   const [undoPending, startUndo] = useTransition();
 
   useEffect(() => {
     if (!undoTarget) return;
-    const timer = window.setTimeout(() => setUndoTarget(null), 5000);
-    return () => window.clearTimeout(timer);
+    const expiresAt = Date.now() + 5000;
+    setUndoSeconds(5);
+    const timer = window.setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setUndoSeconds(seconds);
+      if (seconds === 0) {
+        window.clearInterval(timer);
+        setUndoTarget(null);
+      }
+    }, 100);
+    return () => window.clearInterval(timer);
   }, [undoTarget]);
 
   useEffect(() => {
@@ -127,7 +137,7 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
             <div className="document-list-meta"><span className="document-updated-at">{document.updatedAt}</span><span className="document-evidence-count"><span className="document-evidence-dot" aria-hidden="true" /><span data-language-raw>{document.evidenceCount}</span> 条证据</span></div>
             <div className="document-list-actions">
               <ReliableLink className="button primary document-open-button" href={`/app/documents/${document.id}`}>打开编辑 <span aria-hidden="true">↗</span></ReliableLink>
-              {document.canDelete ? <button className="link-button danger" type="button" onClick={() => { setDeleteResult(emptyResult); setDeleteTarget(document); }}>删除文档</button> : null}
+              {document.canDelete ? <button className="link-button danger document-delete-button" type="button" onClick={() => { setDeleteResult(emptyResult); setDeleteTarget(document); }}><span aria-hidden="true">×</span>删除文档</button> : null}
             </div>
           </article>
         ))}
@@ -177,7 +187,7 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
               else setDeleteResult(result);
             });
           }}>{undoPending ? "恢复中..." : "撤回"}</button>
-          <span className="document-delete-toast-timer">5s</span>
+          <span className="document-delete-toast-timer" aria-label={`还剩 ${undoSeconds} 秒`}>{undoSeconds}s</span>
         </div>
       ) : null}
     </section>
