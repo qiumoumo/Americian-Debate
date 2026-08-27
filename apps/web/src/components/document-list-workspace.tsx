@@ -93,29 +93,38 @@ export function DocumentListWorkspace({ documents, canCreate }: DocumentListWork
   return (
     <section className="document-index" aria-labelledby="document-index-title">
       <header className="document-index-head">
-        <div><div className="eyebrow">Shared Documents</div><h1 id="document-index-title">共享文档</h1></div>
-        {canCreate ? <button className="button primary" type="button" onClick={() => { setCreateResult(emptyResult); setCreating(true); }}>新建文档</button> : <span className="pill">只读</span>}
+        <div className="document-index-title-block">
+          <div className="document-index-kicker"><span className="document-index-kicker-dot" aria-hidden="true" />WORKSPACE / DOCUMENTS</div>
+          <h1 id="document-index-title">共享文档</h1>
+          <p>把辩题、论证与证据整理成一份可共同推进的工作底稿。</p>
+        </div>
+        <div className="document-index-head-action">
+          <span className="document-index-count"><strong>{String(documents.length).padStart(2, "0")}</strong><span>份文档</span></span>
+          {canCreate ? <button className="button primary document-create-button" type="button" onClick={() => { setCreateResult(emptyResult); setCreating(true); }}><span aria-hidden="true">+</span>新建文档</button> : <span className="pill">只读</span>}
+        </div>
       </header>
 
       {deleteResult.ok && deleteResult.message ? (
         <p className="success-text" role="status" aria-live="polite">{deleteResult.message}</p>
       ) : null}
 
+      <div className="document-list-head" aria-hidden="true"><span>DOCUMENTS / {String(documents.length).padStart(2, "0")}</span><span>最近更新</span></div>
       <div className="document-list" aria-label="文档列表">
-        {documents.map((document) => (
+        {documents.map((document, index) => (
           <article className="document-list-row" key={document.id}>
+            <span className="document-row-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <div className="document-list-copy">
               <strong data-language-raw>{document.title}</strong>
               {document.description ? <p data-language-raw>{document.description}</p> : <p className="empty-state">暂无描述</p>}
             </div>
-            <div className="document-list-meta"><span>{document.updatedAt}</span><span><span data-language-raw>{document.evidenceCount}</span> <span>条证据</span></span></div>
+            <div className="document-list-meta"><span className="document-updated-at">{document.updatedAt}</span><span className="document-evidence-count"><span className="document-evidence-dot" aria-hidden="true" /><span data-language-raw>{document.evidenceCount}</span> 条证据</span></div>
             <div className="document-list-actions">
-              <ReliableLink className="button primary" href={`/app/documents/${document.id}`}>打开编辑 →</ReliableLink>
+              <ReliableLink className="button primary document-open-button" href={`/app/documents/${document.id}`}>打开编辑 <span aria-hidden="true">↗</span></ReliableLink>
               {document.canDelete ? <button className="link-button danger" type="button" onClick={() => { setDeleteResult(emptyResult); setDeleteTarget(document); }}>删除文档</button> : null}
             </div>
           </article>
         ))}
-        {documents.length === 0 ? <p className="empty-state document-list-empty">还没有文档。</p> : null}
+        {documents.length === 0 ? <div className="document-list-empty"><span className="document-empty-mark" aria-hidden="true">01</span><div><strong>还没有文档</strong><p>从一份新的辩题工作底稿开始。</p></div>{canCreate ? <button className="button" type="button" onClick={() => { setCreateResult(emptyResult); setCreating(true); }}>创建第一份文档 <span aria-hidden="true">↗</span></button> : null}</div> : null}
       </div>
 
       {creating ? (
