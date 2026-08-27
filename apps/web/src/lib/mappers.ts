@@ -259,7 +259,7 @@ export function mapFlowRow(record: {
   };
 }
 
-// ── Round Library（素材库）──────────────────────────────────────
+// ── Round Library（比赛录像库）──────────────────────────────────
 export function mapLibraryRound(record: {
   id: string;
   title: string;

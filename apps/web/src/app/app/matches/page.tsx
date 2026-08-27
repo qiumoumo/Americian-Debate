@@ -14,7 +14,8 @@ import {
   getEvidenceForWorkspace,
   getFlowForMatch,
   getMatchById,
-  getMatchEvidenceIds
+  getMatchEvidenceIds,
+  type EvidenceScope
 } from "@/lib/data";
 import { requireUser } from "@/lib/auth";
 import { getMatchReport } from "@/lib/match-reports";
@@ -25,10 +26,12 @@ import { getRoomDetails, listRoomsForUser } from "@/lib/rooms";
 export default async function MatchesPage({
   searchParams
 }: {
-  searchParams: Promise<{ match?: string }>;
+  searchParams: Promise<{ match?: string; evidenceScope?: string }>;
 }) {
   const session = await requireUser();
-  const { match: requestedId } = await searchParams;
+  const params = await searchParams;
+  const requestedId = params.match;
+  const evidenceScope: EvidenceScope = params.evidenceScope === "global" ? "global" : "workspace";
 
   // 只有传入了有效且属于本 workspace 的比赛 id 时，才进入聚焦比赛室。
   const selectedMatch = requestedId
@@ -38,7 +41,7 @@ export default async function MatchesPage({
   // ----- 比赛室状态：只显示这一场比赛的计时器 / 笔记 / AI / Flow。 -----
   if (selectedMatch) {
     const [evidence, flow, linkedEvidenceIds, room, report] = await Promise.all([
-      getEvidenceForWorkspace(session.workspace.id, session.user.id),
+      getEvidenceForWorkspace({ workspaceId: session.workspace.id, userId: session.user.id, scope: evidenceScope }),
       getFlowForMatch(selectedMatch.id, session.user.id),
       getMatchEvidenceIds(selectedMatch.id, session.user.id),
       getRoomDetails(selectedMatch.id, session.user.id, session.user.isSystemAdmin),
@@ -145,6 +148,8 @@ export default async function MatchesPage({
             evidence={evidence}
             matchId={report.reportSubmittedAt ? undefined : selectedMatch.id}
             linkedIds={linkedEvidenceIds}
+            scope={evidenceScope}
+            scopeHrefBase={`/app/matches?match=${encodeURIComponent(selectedMatch.id)}`}
           />
         </SectionCard>
 

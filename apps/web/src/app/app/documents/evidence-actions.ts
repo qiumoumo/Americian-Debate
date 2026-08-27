@@ -6,21 +6,20 @@ import type { EvidenceDraft, Side } from "@debate/shared";
 import { requireUser } from "@/lib/auth";
 import { sideToPrisma } from "@/lib/mappers";
 import { requireRoomAccess, touchRoomByMatchId } from "@/lib/rooms";
+import { documentActorFromSession, requireDocumentAccess, type DocumentActor } from "@/lib/documents";
 
 // ── Evidence 导入 / 编辑 / 删除 / 关联比赛的 server actions ──────────
 // 全部经 requireUser() 校验 workspace 归属；返回值给 client（支持导入后撤回、
 // 加入/移出比赛）。Next 15 允许 server action 接收对象参数并返回结果。
 
-/** 校验目标文档属于当前 workspace，返回其 id。 */
-async function assertOwnedDocument(documentId: string, userId: string, isSystemAdmin: boolean) {
-  const document = await db.document.findFirst({
-    where: { id: documentId, deletedAt: null, ...(isSystemAdmin ? {} : { ownerId: userId }) },
-    select: { id: true }
+async function requireEvidenceAccess(actor: DocumentActor, evidenceId: string) {
+  const evidence = await db.evidence.findFirst({
+    where: { id: evidenceId, document: { workspaceId: actor.workspaceId, deletedAt: null } },
+    select: { documentId: true }
   });
-  if (!document) {
-    throw new Error("Document not found");
-  }
-  return document.id;
+  if (!evidence) throw new Error("证据不存在或不属于当前工作区");
+  await requireDocumentAccess(actor, evidence.documentId, "edit");
+  return evidence.documentId;
 }
 
 function normalizeSourceUrl(raw: string): string {
@@ -39,13 +38,68 @@ export interface ImportEvidenceResult {
   ids: string[];
 }
 
+function requireEvidenceText(input: { title: string; claim: string; quote: string }) {
+  if (!input.title.trim() || !input.claim.trim() || !input.quote.trim()) {
+    throw new Error("标题、Claim 和 Quote 均不能为空");
+  }
+}
+
+export interface EvidenceMutationResult {
+  ok: boolean;
+  message: string;
+  id?: string;
+}
+
+export async function createEvidenceCard(input: {
+  documentId: string;
+  title: string;
+  claim: string;
+  quote: string;
+  sourceUrl: string;
+  author: string;
+  publication: string;
+  publishedDate: string;
+  side: Side;
+  tags: string[];
+}): Promise<EvidenceMutationResult> {
+  const session = await requireUser();
+  const actor = documentActorFromSession(session);
+  await requireDocumentAccess(actor, input.documentId, "edit");
+  try {
+    requireEvidenceText(input);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? `${error.message}。` : "证据字段不完整。" };
+  }
+  const created = await db.evidence.create({
+    data: {
+      documentId: input.documentId,
+      title: input.title.trim(),
+      claim: input.claim.trim(),
+      quote: input.quote.trim(),
+      sourceUrl: normalizeSourceUrl(input.sourceUrl),
+      author: input.author.trim() || null,
+      publication: input.publication.trim() || null,
+      publishedDate: input.publishedDate.trim() || null,
+      side: sideToPrisma[input.side] ?? "GENERIC",
+      tagsJson: input.tags.map((tag) => tag.trim()).filter(Boolean),
+      contentRange: {}
+    },
+    select: { id: true }
+  });
+  revalidatePath("/app/documents");
+  revalidatePath(`/app/documents/${input.documentId}`);
+  return { ok: true, id: created.id, message: "证据已添加。" };
+}
+
 /** 批量导入解析后的草稿卡到某文档。返回新建卡片 id，供导入后撤回。 */
 export async function importEvidenceCards(input: {
   documentId: string;
   cards: EvidenceDraft[];
 }): Promise<ImportEvidenceResult> {
   const session = await requireUser();
-  const documentId = await assertOwnedDocument(input.documentId, session.user.id, session.user.isSystemAdmin);
+  const actor = documentActorFromSession(session);
+  const document = await requireDocumentAccess(actor, input.documentId, "edit");
+  const documentId = document.id;
 
   const ids: string[] = [];
   for (const card of input.cards) {
@@ -75,6 +129,7 @@ export async function importEvidenceCards(input: {
   }
 
   revalidatePath("/app/documents");
+  revalidatePath(`/app/documents/${documentId}`);
   return { created: ids.length, ids };
 }
 
@@ -84,13 +139,24 @@ export async function deleteEvidenceCards(input: { ids: string[] }): Promise<{ d
   if (!input.ids.length) {
     return { deleted: 0 };
   }
+  const actor = documentActorFromSession(session);
+  const ids = [...new Set(input.ids)];
+  const evidence = await db.evidence.findMany({
+    where: { id: { in: ids }, document: { workspaceId: actor.workspaceId, deletedAt: null } },
+    select: { id: true, documentId: true }
+  });
+  if (evidence.length !== ids.length) throw new Error("部分证据不存在或不属于当前工作区");
+  for (const documentId of new Set(evidence.map((card) => card.documentId))) {
+    await requireDocumentAccess(actor, documentId, "edit");
+  }
   const result = await db.evidence.deleteMany({
     where: {
-      id: { in: input.ids },
-      document: { deletedAt: null, ...(session.user.isSystemAdmin ? {} : { ownerId: session.user.id }) }
+      id: { in: ids },
+      document: { workspaceId: actor.workspaceId, deletedAt: null }
     }
   });
   revalidatePath("/app/documents");
+  for (const documentId of new Set(evidence.map((card) => card.documentId))) revalidatePath(`/app/documents/${documentId}`);
   return { deleted: result.count };
 }
 
@@ -108,8 +174,11 @@ export async function updateEvidenceCard(input: {
   tags: string[];
 }): Promise<void> {
   const session = await requireUser();
-  await db.evidence.updateMany({
-    where: { id: input.id, document: { deletedAt: null, ...(session.user.isSystemAdmin ? {} : { ownerId: session.user.id }) } },
+  const actor = documentActorFromSession(session);
+  const documentId = await requireEvidenceAccess(actor, input.id);
+  requireEvidenceText(input);
+  const result = await db.evidence.updateMany({
+    where: { id: input.id, document: { workspaceId: actor.workspaceId, deletedAt: null } },
     data: {
       title: input.title.trim(),
       claim: input.claim.trim(),
@@ -122,7 +191,9 @@ export async function updateEvidenceCard(input: {
       tagsJson: input.tags.map((tag) => tag.trim()).filter(Boolean)
     }
   });
+  if (result.count !== 1) throw new Error("证据保存失败");
   revalidatePath("/app/documents");
+  revalidatePath(`/app/documents/${documentId}`);
 }
 
 /** 把一张 evidence 关联到某场比赛（幂等，靠 @@unique(matchId, evidenceId)）。 */

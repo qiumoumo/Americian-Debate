@@ -13,13 +13,8 @@ import {
 import { deleteEvidenceCards, importEvidenceCards } from "@/app/app/documents/evidence-actions";
 import { UndoToast } from "@/components/undo-toast";
 
-interface DocumentOption {
-  id: string;
-  title: string;
-}
-
 interface EvidenceImporterProps {
-  documents: DocumentOption[];
+  documentId: string;
 }
 
 interface DraftRow extends EvidenceDraft {
@@ -59,13 +54,12 @@ function IssueBadges({ issues }: { issues: EvidenceIssue[] }) {
   );
 }
 
-export function EvidenceImporter({ documents }: EvidenceImporterProps) {
+export function EvidenceImporter({ documentId }: EvidenceImporterProps) {
   const router = useRouter();
   const [raw, setRaw] = useState("");
   const [rows, setRows] = useState<DraftRow[]>([]);
   // 选择历史栈：记录每次选择变化前的快照，支持「撤回选择」。
   const [selectionHistory, setSelectionHistory] = useState<boolean[][]>([]);
-  const [targetDocId, setTargetDocId] = useState(documents[0]?.id ?? "");
   const [isImporting, setIsImporting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ ids: string[]; message: string } | null>(null);
@@ -120,7 +114,7 @@ export function EvidenceImporter({ documents }: EvidenceImporterProps) {
 
   async function runImport() {
     const selected = rows.filter((row) => row.selected);
-    if (!targetDocId || !selected.length) return;
+    if (!selected.length) return;
     setIsImporting(true);
     setStatus(null);
     try {
@@ -135,7 +129,7 @@ export function EvidenceImporter({ documents }: EvidenceImporterProps) {
         side: row.side,
         tags: row.tags
       }));
-      const result = await importEvidenceCards({ documentId: targetDocId, cards });
+      const result = await importEvidenceCards({ documentId, cards });
       // 导入成功的卡片从预览中移除，剩余留待继续处理。
       const importedKeys = new Set(selected.map((row) => row.key));
       setRows((current) => current.filter((row) => !importedKeys.has(row.key)));
@@ -153,10 +147,6 @@ export function EvidenceImporter({ documents }: EvidenceImporterProps) {
     await deleteEvidenceCards({ ids });
     router.refresh();
     setStatus("已撤回本次导入。");
-  }
-
-  if (!documents.length) {
-    return <p className="empty-state">请先创建文档，再导入 evidence。</p>;
   }
 
   return (
@@ -185,12 +175,6 @@ export function EvidenceImporter({ documents }: EvidenceImporterProps) {
             <button type="button" className="link-button" onClick={() => setAllSelected(true)}>全选</button>
             <button type="button" className="link-button" onClick={() => setAllSelected(false)}>全不选</button>
             <button type="button" className="link-button" onClick={undoSelection} disabled={!selectionHistory.length}>撤回选择</button>
-            <label className="field inline-field">
-              <span>导入到</span>
-              <select value={targetDocId} onChange={(event) => setTargetDocId(event.target.value)}>
-                {documents.map((doc) => (<option key={doc.id} value={doc.id}>{doc.title}</option>))}
-              </select>
-            </label>
             <button type="button" className="button primary" onClick={runImport} disabled={isImporting || !selectedCount}>
               {isImporting ? "导入中..." : `导入选中 (${selectedCount})`}
             </button>

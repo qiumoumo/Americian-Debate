@@ -123,7 +123,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         .catch((error: unknown) => ({ report: null, error: selectionErrorMessage(error) }))
     : Promise.resolve({ report: null, error: null });
   const manualEvidencePromise: Promise<MatchReportEvidenceOption[]> = isNew && canCreate
-    ? getEvidenceForWorkspace(session.workspace.id, session.user.id).then((evidence) => evidence.map((item) => ({
+    ? getEvidenceForWorkspace({ workspaceId: session.workspace.id, userId: session.user.id, scope: "workspace" }).then((evidence) => evidence.map((item) => ({
         evidenceId: item.id,
         title: item.title,
         claim: item.claim,

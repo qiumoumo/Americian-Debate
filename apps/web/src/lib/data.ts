@@ -10,14 +10,24 @@ export async function getDocumentsForWorkspace(workspaceId: string) {
     orderBy: { updatedAt: "desc" }
   });
 
-  return documents.map(mapDocument);
+  return documents.map((document) => ({ ...mapDocument(document), ownerId: document.ownerId }));
 }
 
-export async function getEvidenceForWorkspace(workspaceId: string, userId?: string) {
+export type EvidenceScope = "workspace" | "global";
+
+export async function getEvidenceForWorkspace({
+  workspaceId,
+  userId,
+  scope = "workspace"
+}: {
+  workspaceId: string;
+  userId: string;
+  scope?: EvidenceScope;
+}) {
   const evidence = await db.evidence.findMany({
-    where: userId
+    where: scope === "global"
       ? { document: { deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } }
-      : { document: { workspaceId, deletedAt: null } },
+      : { document: { workspaceId, deletedAt: null, workspace: { deletedAt: null }, owner: { disabledAt: null } } },
     include: { document: { include: { owner: true, workspace: true } } },
     orderBy: { updatedAt: "desc" }
   });
@@ -45,7 +55,7 @@ export async function getMatchEvidenceIds(matchId: string, userId: string) {
   return links.map((link) => link.evidenceId);
 }
 
-// ── Round Library（素材库）：workspace 共享 round + 当前用户私有笔记 ──
+// ── Round Library（比赛录像库）：workspace 共享 round + 当前用户私有笔记 ──
 export async function getLibraryRoundsForWorkspace(workspaceId: string, userId: string) {
   const rounds = await db.libraryRound.findMany({
     where: { workspaceId, deletedAt: null },

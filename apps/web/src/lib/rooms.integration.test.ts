@@ -129,16 +129,27 @@ describe("room membership interface", () => {
     assert.equal(advanced.timer.speechIndex, 1);
   });
 
-  it("returns global Evidence with the viewer's cross-workspace cards first", async () => {
+  it("defaults Evidence to the current workspace and exposes global cards only when requested", async () => {
     const viewer = await createUserFixture("evidence-viewer");
     const other = await createUserFixture("evidence-other");
     const viewerDocument = await db.document.create({ data: { workspaceId: viewer.workspace.id, ownerId: viewer.user.id, title: "Viewer", contentJson: {} } });
     const otherDocument = await db.document.create({ data: { workspaceId: other.workspace.id, ownerId: other.user.id, title: "Other", contentJson: {} } });
     await db.evidence.create({ data: { documentId: otherDocument.id, title: "Other newer", claim: "Other", quote: "Quote", sourceUrl: "https://example.com/other", tagsJson: [], contentRange: {} } });
     await db.evidence.create({ data: { documentId: viewerDocument.id, title: "Mine", claim: "Mine", quote: "Quote", sourceUrl: "https://example.com/mine", tagsJson: [], contentRange: {} } });
-    const evidence = await data.getEvidenceForWorkspace(viewer.workspace.id, viewer.user.id);
-    assert.equal(evidence[0]?.title, "Mine");
-    assert.ok(evidence.some((card) => card.title === "Other newer" && card.uploaderName === other.user.name && !card.isMine));
+    const workspaceEvidence = await data.getEvidenceForWorkspace({
+      workspaceId: viewer.workspace.id,
+      userId: viewer.user.id,
+      scope: "workspace"
+    });
+    assert.deepEqual(workspaceEvidence.map((card) => card.title), ["Mine"]);
+
+    const globalEvidence = await data.getEvidenceForWorkspace({
+      workspaceId: viewer.workspace.id,
+      userId: viewer.user.id,
+      scope: "global"
+    });
+    assert.equal(globalEvidence[0]?.title, "Mine");
+    assert.ok(globalEvidence.some((card) => card.title === "Other newer" && card.uploaderName === other.user.name && !card.isMine));
   });
 
   it("normalizes legacy text session timestamps so stale accounts are offline", async () => {

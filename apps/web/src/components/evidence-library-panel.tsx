@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { validateEvidence, type Evidence, type Side } from "@debate/shared";
 import { addEvidenceToMatch, removeEvidenceFromMatch } from "@/app/app/documents/evidence-actions";
 import { UndoToast } from "@/components/undo-toast";
+import type { EvidenceScope } from "@/lib/data";
 
 interface EvidenceLibraryPanelProps {
   evidence: Evidence[];
@@ -12,11 +13,13 @@ interface EvidenceLibraryPanelProps {
   matchId?: string;
   /** 已关联到该比赛的 evidence id。 */
   linkedIds?: string[];
+  scope?: EvidenceScope;
+  scopeHrefBase?: string;
 }
 
 const SIDE_FILTERS: Array<Side | "All"> = ["All", "Aff", "Neg", "Pro", "Con", "Generic"];
 
-export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: EvidenceLibraryPanelProps) {
+export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [], scope = "workspace", scopeHrefBase }: EvidenceLibraryPanelProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [sideFilter, setSideFilter] = useState<Side | "All">("All");
@@ -74,6 +77,12 @@ export function EvidenceLibraryPanel({ evidence, matchId, linkedIds = [] }: Evid
 
   return (
     <div className="library-panel">
+      {scopeHrefBase ? (
+        <div className="evidence-scope-switch" role="group" aria-label="证据范围">
+          <button type="button" className={`chip ${scope === "workspace" ? "active" : ""}`} onClick={() => router.push(`${scopeHrefBase}&evidenceScope=workspace`)}>当前工作区</button>
+          <button type="button" className={`chip ${scope === "global" ? "active" : ""}`} onClick={() => router.push(`${scopeHrefBase}&evidenceScope=global`)}>全站证据</button>
+        </div>
+      ) : null}
       <div className="search-bar">
         <input
           type="search"

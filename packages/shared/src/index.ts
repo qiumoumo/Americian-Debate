@@ -518,7 +518,7 @@ export const formatOptions: Array<{ id: DebateFormat; name: string }> = ALL_FORM
   name: formatConfigs[id].name
 }));
 
-// 素材库 round 的推荐标签词表（可自由输入，UI 仅作为快捷建议）。
+// 比赛录像库 round 的推荐标签词表（可自由输入，UI 仅作为快捷建议）。
 export const suggestedRoundTags = [
   "PF", "LD", "Policy", "framework", "crossfire", "weighing",
   "final focus", "rebuttal", "signposting", "impact calc", "clash", "collapse"

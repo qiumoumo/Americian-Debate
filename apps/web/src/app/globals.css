@@ -533,7 +533,7 @@ p {
   background: var(--surface-strong);
 }
 
-/* 素材库：可点击的录像条目高亮 + 内嵌视频 16:9 自适应框。 */
+/* 比赛录像库：可点击的录像条目高亮 + 内嵌视频 16:9 自适应框。 */
 a.timeline-item {
   display: grid;
   gap: 6px;
@@ -4177,5 +4177,349 @@ select:-webkit-autofill {
   .nav-link:focus-visible > span:first-child {
     box-shadow: 6px 6px 0 var(--warning);
     transform: none;
+  }
+}
+
+/* Shared documents: quiet index + focused editing workbench. */
+.document-index {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.document-index-head,
+.document-workbench-bar,
+.document-panel-head,
+.document-modal-head,
+.document-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.document-index-head {
+  padding-bottom: 22px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.document-index-head h1 {
+  margin: 4px 0 0;
+  font-size: 2.4rem;
+  line-height: 1.1;
+}
+
+.document-list {
+  display: grid;
+}
+
+.document-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 104px;
+  padding: 18px 2px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.document-list-copy {
+  min-width: 0;
+}
+
+.document-list-copy strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.document-list-copy p {
+  margin: 6px 0 0;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.document-list-meta {
+  display: grid;
+  min-width: 110px;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.document-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.document-list-actions .link-button {
+  margin-top: 0;
+}
+
+.document-list-empty {
+  padding: 48px 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.document-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(30 27 22 / 58%);
+  backdrop-filter: blur(4px);
+}
+
+.document-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: 0 28px 90px rgb(18 16 12 / 34%);
+}
+
+.document-modal-head {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.document-modal-head h2,
+.document-panel-head h2 {
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.document-modal-head .link-button {
+  margin-top: 0;
+}
+
+.document-modal-actions {
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.document-workbench {
+  display: grid;
+  gap: 18px;
+}
+
+.document-workbench-bar {
+  min-height: 48px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.document-workbench-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.document-body-workspace,
+.document-evidence-workspace {
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: rgb(255 253 248 / 94%);
+}
+
+.document-body-workspace {
+  padding: 20px;
+}
+
+.document-body-workspace fieldset,
+.document-evidence-editor fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.document-panel-head {
+  min-height: 48px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.document-panel-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent-ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.document-meta-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.65fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.document-body-field textarea {
+  min-height: 520px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.7;
+}
+
+.document-save-state {
+  min-width: 120px;
+  text-align: right;
+}
+
+.pill.warning {
+  color: #6f480d;
+  background: #fff0c7;
+}
+
+.document-evidence-workspace {
+  position: sticky;
+  top: 70px;
+  max-height: calc(100vh - 94px);
+  overflow: auto;
+  padding: 18px;
+}
+
+.document-evidence-modes,
+.evidence-scope-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.document-evidence-modes {
+  margin-bottom: 14px;
+}
+
+.evidence-scope-switch {
+  margin-bottom: 12px;
+}
+
+.document-evidence-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px 0 18px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.document-evidence-editor h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.98rem;
+}
+
+.document-evidence-list {
+  display: grid;
+  margin-top: 12px;
+}
+
+.document-evidence-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "side title" ". claim";
+  gap: 4px 8px;
+  width: 100%;
+  padding: 11px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.document-evidence-row:hover,
+.document-evidence-row:focus-visible,
+.document-evidence-row[data-active="true"] {
+  background: var(--accent-soft);
+}
+
+.document-evidence-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.document-evidence-row .side-pill {
+  grid-area: side;
+}
+
+.document-evidence-row strong {
+  grid-area: title;
+  align-self: center;
+  overflow-wrap: anywhere;
+}
+
+.document-evidence-row small {
+  grid-area: claim;
+  overflow: hidden;
+  color: var(--ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .document-workbench-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .document-evidence-workspace {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .document-index-head,
+  .document-panel-head {
+    align-items: flex-start;
+  }
+
+  .document-index-head h1 {
+    font-size: 2rem;
+  }
+
+  .document-list-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 0;
+  }
+
+  .document-list-meta {
+    display: flex;
+    min-width: 0;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .document-list-actions {
+    justify-content: space-between;
+  }
+
+  .document-modal-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .document-modal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .document-meta-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .document-body-field textarea {
+    min-height: 420px;
   }
 }

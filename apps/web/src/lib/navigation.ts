@@ -3,7 +3,7 @@ export const userNavigation = [
   { href: "/app/matches", label: "比赛页面", badge: "Flow" },
   { href: "/app/history", label: "赛事记录", badge: "Stats" },
   { href: "/app/practice", label: "Practice Debate", badge: "AI" },
-  { href: "/app/library", label: "素材库", badge: "Film" },
+  { href: "/app/library", label: "比赛录像库", badge: "Film" },
   { href: "/app/settings", label: "用户设置", badge: "Key" }
 ] as const;
 

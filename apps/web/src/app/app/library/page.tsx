@@ -28,9 +28,9 @@ export default async function LibraryPage({
     >
       <section className="hero">
         <div className="eyebrow">Round Library</div>
-        <h1>素材库</h1>
+        <h1>比赛录像库</h1>
         <p>
-          保存优秀比赛的视频、题目、赛制、队伍与年份，边看边做带时间戳的 flow 笔记。借鉴 debatevid.io 的资料组织方式。
+          集中保存外部优秀比赛录像；录像由工作区共享，时间戳笔记仅自己可见。
         </p>
       </section>
 
