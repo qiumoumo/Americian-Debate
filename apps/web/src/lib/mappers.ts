@@ -264,6 +264,8 @@ export function mapFlowRow(record: {
 // ── Round Library（比赛录像库）──────────────────────────────────
 export function mapLibraryRound(record: {
   id: string;
+  createdByUserId?: string | null;
+  createdBy?: { name: string } | null;
   title: string;
   description: string;
   videoUrl: string;
@@ -279,6 +281,8 @@ export function mapLibraryRound(record: {
 }): LibraryRoundRecord {
   return {
     id: record.id,
+    createdByUserId: record.createdByUserId ?? null,
+    createdByName: record.createdBy?.name ?? null,
     title: record.title,
     description: record.description,
     videoUrl: record.videoUrl,

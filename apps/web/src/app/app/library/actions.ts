@@ -6,6 +6,18 @@ import type { DebateFormat } from "@debate/shared";
 import { requireUser } from "@/lib/auth";
 import { formatToPrisma, parseTimestampToSeconds } from "@/lib/mappers";
 import { tagsToJson } from "@/lib/data";
+import {
+  canCreateLibraryRound,
+  canManageLibraryRound,
+  libraryActorFromSession,
+  requireLibraryRoundAccess
+} from "@/lib/library";
+
+export interface LibraryActionResult {
+  ok: boolean;
+  message: string;
+  roundId?: string;
+}
 
 function requiredText(formData: FormData, name: string) {
   const value = String(formData.get(name) ?? "").trim();
@@ -45,36 +57,85 @@ function roundFields(formData: FormData) {
   };
 }
 
-export async function createRound(formData: FormData) {
+export async function createRound(formData: FormData): Promise<LibraryActionResult> {
   const session = await requireUser();
-  await db.libraryRound.create({
-    data: {
-      workspaceId: session.workspace.id,
-      createdByUserId: session.user.id,
-      ...roundFields(formData)
+  const actor = libraryActorFromSession(session);
+  if (!canCreateLibraryRound(actor)) return { ok: false, message: "只读成员不能创建素材。" };
+  try {
+    const created = await db.libraryRound.create({
+      data: {
+        workspaceId: session.workspace.id,
+        createdByUserId: session.user.id,
+        ...roundFields(formData)
+      },
+      select: { id: true }
+    });
+    revalidatePath("/app/library");
+    return { ok: true, roundId: created.id, message: "素材已创建。" };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "素材创建失败。" };
+  }
+}
+
+export async function updateRound(formData: FormData): Promise<LibraryActionResult> {
+  const session = await requireUser();
+  const roundId = requiredText(formData, "roundId");
+  try {
+    const actor = libraryActorFromSession(session);
+    await requireLibraryRoundAccess(actor, roundId, "edit");
+    const result = await db.libraryRound.updateMany({
+      where: { id: roundId, workspaceId: session.workspace.id, deletedAt: null },
+      data: roundFields(formData)
+    });
+    if (result.count !== 1) throw new Error("素材保存失败");
+    revalidatePath("/app/library");
+    revalidatePath(`/app/library/${roundId}`);
+    return { ok: true, roundId, message: "素材改动已保存。" };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "素材保存失败。" };
+  }
+}
+
+export async function deleteRound(formData: FormData): Promise<LibraryActionResult> {
+  const session = await requireUser();
+  const roundId = requiredText(formData, "roundId");
+  try {
+    await requireLibraryRoundAccess(libraryActorFromSession(session), roundId, "delete");
+    const result = await db.libraryRound.updateMany({
+      where: { id: roundId, workspaceId: session.workspace.id, deletedAt: null },
+      data: { deletedAt: new Date() }
+    });
+    if (result.count !== 1) throw new Error("素材删除失败");
+    return { ok: true, roundId, message: "素材已删除。" };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "素材删除失败。" };
+  }
+}
+
+export async function restoreRound(formData: FormData): Promise<LibraryActionResult> {
+  const session = await requireUser();
+  const roundId = requiredText(formData, "roundId");
+  try {
+    const cutoff = new Date(Date.now() - 5_000);
+    const round = await db.libraryRound.findFirst({
+      where: { id: roundId, workspaceId: session.workspace.id, deletedAt: { gte: cutoff } },
+      select: { createdByUserId: true }
+    });
+    if (!round) throw new Error("撤回窗口已结束，这份素材无法恢复");
+    if (!canManageLibraryRound(libraryActorFromSession(session), round.createdByUserId)) {
+      throw new Error("没有恢复这份素材的权限");
     }
-  });
-  revalidatePath("/app/library");
-}
-
-export async function updateRound(formData: FormData) {
-  const session = await requireUser();
-  const roundId = requiredText(formData, "roundId");
-  await db.libraryRound.updateMany({
-    where: { id: roundId, workspaceId: session.workspace.id, deletedAt: null },
-    data: roundFields(formData)
-  });
-  revalidatePath("/app/library");
-}
-
-export async function deleteRound(formData: FormData) {
-  const session = await requireUser();
-  const roundId = requiredText(formData, "roundId");
-  await db.libraryRound.updateMany({
-    where: { id: roundId, workspaceId: session.workspace.id, deletedAt: null },
-    data: { deletedAt: new Date() }
-  });
-  revalidatePath("/app/library");
+    const result = await db.libraryRound.updateMany({
+      where: { id: roundId, workspaceId: session.workspace.id, deletedAt: { gte: cutoff } },
+      data: { deletedAt: null }
+    });
+    if (result.count !== 1) throw new Error("素材恢复失败");
+    revalidatePath("/app/library");
+    revalidatePath(`/app/library/${roundId}`);
+    return { ok: true, roundId, message: "素材已恢复。" };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "素材恢复失败。" };
+  }
 }
 
 export async function addNote(formData: FormData) {
@@ -99,6 +160,7 @@ export async function addNote(formData: FormData) {
     }
   });
   revalidatePath("/app/library");
+  revalidatePath(`/app/library/${roundId}`);
 }
 
 export async function deleteNote(formData: FormData) {
@@ -109,4 +171,6 @@ export async function deleteNote(formData: FormData) {
     where: { id: noteId, userId: session.user.id, round: { workspaceId: session.workspace.id } }
   });
   revalidatePath("/app/library");
+  const roundId = String(formData.get("roundId") ?? "").trim();
+  if (roundId) revalidatePath(`/app/library/${roundId}`);
 }

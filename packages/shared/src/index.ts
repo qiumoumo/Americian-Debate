@@ -71,6 +71,8 @@ export interface RoundVideoNote {
 
 export interface LibraryRoundRecord {
   id: string;
+  createdByUserId: string | null;
+  createdByName: string | null;
   title: string;
   description: string;
   videoUrl: string;

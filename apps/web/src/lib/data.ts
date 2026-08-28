@@ -60,6 +60,7 @@ export async function getLibraryRoundsForWorkspace(workspaceId: string, userId: 
   const rounds = await db.libraryRound.findMany({
     where: { workspaceId, deletedAt: null },
     include: {
+      createdBy: { select: { name: true } },
       // 一次带出当前用户的笔记，避免 N+1；NULL 时间戳排在前。
       notes: { where: { userId }, orderBy: [{ timestampSeconds: "asc" }, { createdAt: "asc" }] }
     },
@@ -72,6 +73,7 @@ export async function getLibraryRoundById(roundId: string, workspaceId: string, 
   const round = await db.libraryRound.findFirst({
     where: { id: roundId, workspaceId, deletedAt: null },
     include: {
+      createdBy: { select: { name: true } },
       notes: { where: { userId }, orderBy: [{ timestampSeconds: "asc" }, { createdAt: "asc" }] }
     }
   });
